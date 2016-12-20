@@ -31,9 +31,9 @@ program P
 			{
 				val.putp(val.getp(x)+1); 
 			} else
-				if (‐size < x && x < 0) 
+				if (-size < x && x < 0) 
 				{
-					val.putn(val.getn(‐x)+1); 
+					val.putn(val.getn(-x)+1); 
 				}
 				read(x);
 		}
