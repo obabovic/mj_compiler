@@ -1,2 +1,8 @@
 /build/
+<<<<<<< HEAD
 /dist/
+=======
+
+# macOS
+.DS_Store
+>>>>>>> 6e1502db3f10379c76696af273feb9be122c298f
