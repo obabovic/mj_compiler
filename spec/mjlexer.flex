@@ -36,7 +36,7 @@ import java_cup.runtime.Symbol;
 "\r\n" 	{ }
 "\f" 	{ }
 
-"program"   { return new_symbol(sym.PROG, yytext()); }
+"program"       { return new_symbol(sym.PROG, yytext());  }
 "print" 	{ return new_symbol(sym.PRINT, yytext()); }
 "return" 	{ return new_symbol(sym.RETURN, yytext()); }
 "void" 		{ return new_symbol(sym.VOID, yytext()); }
@@ -47,7 +47,7 @@ import java_cup.runtime.Symbol;
 "(" 		{ return new_symbol(sym.LPAREN, yytext()); }
 ")" 		{ return new_symbol(sym.RPAREN, yytext()); }
 "{" 		{ return new_symbol(sym.LBRACE, yytext()); }
-"}"			{ return new_symbol(sym.RBRACE, yytext()); }
+"}"             { return new_symbol(sym.RBRACE, yytext()); }
 
 "//" 		     { yybegin(COMMENT); }
 <COMMENT> .      { yybegin(COMMENT); }

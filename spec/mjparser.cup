@@ -4,8 +4,8 @@ import java_cup.runtime.*;
 import org.apache.log4j.*;
 
 // import java.io.*;
-import mj_compiler.symboltable.Tab;
-import mj_compiler.symboltable.concepts.*;
+import rs.etf.pp1.symboltable.Tab;
+import rs.etf.pp1.symboltable.concepts.*;
 
 
 parser code {:
