@@ -2,21 +2,21 @@ package mj_compiler;
 
 import java_cup.runtime.*;
 import org.apache.log4j.*;
-
-// import java.io.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.*;
+import utils.ParserActionImplementer;
+
+// import java.io.*;
 
 
 parser code {:
 	
 	int printCallCount = 0;
-	boolean errorDetected = false;
 	
 	Logger log = Logger.getLogger(getClass());
    
-   
-    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+    //REDEFINE LOGGER METHODS
+    //======================================================================================
      
     public void report_fatal_error(String message, Object info) throws java.lang.Exception {
       done_parsing();
@@ -24,29 +24,35 @@ parser code {:
     }
   
     public void syntax_error(Symbol cur_token) {
-        report_error("\nSintaksna greska", cur_token);
+        report_error("\nSyntax error : ", cur_token);
     }
   
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+        report_fatal_error("Error : parsing has to be stopped", cur_token);
     }
 
-    public void report_error(String message, Object info) {
-    	errorDetected = true;
-    	StringBuilder msg = new StringBuilder(message); 
-    	if (info instanceof Symbol)
-            msg.append (" na liniji ").append(((Symbol)info).left);
-        log.error(msg.toString());
-    }
-    
-    public void report_info(String message, Object info) {
-    	StringBuilder msg = new StringBuilder(message); 
-    	if (info instanceof Symbol)
-            msg.append (" na liniji ").append(((Symbol)info).left);
-        log.info(msg.toString());
-    }
-    
+    public void report_error(String message, Object info)
+      {
+        System.err.print(message);
+        System.err.flush();
+        if (info instanceof Symbol)
+                  System.err.println("Error : on line " + ((Symbol)info).left);
+        else System.err.println("");
+      }
 :}
+
+
+action code {:
+	ParserActionImplementer impl = new ParserActionImplementer() ;
+	
+:}
+
+
+init with {:
+  Tab.init(); 
+  
+:}
+
 
 scan with {:
 	Symbol s = this.getScanner().next_token();
@@ -55,28 +61,250 @@ scan with {:
 	return s;
 :}
 
-
-init with {:
-	Tab.init(); // Universe scope
-:}
-
-action code {:
-	Obj currentMethod = null;
-	boolean returnFound = false;
-:}
-
-terminal PROG, BREAK, CONST, READ, STATIC, SEMI, COMMA, PRINT, RETURN, VOID, DOT;
-terminal CLASS, EXTENDS, NEW ;
-terminal FOR, CONTINUE ;
+terminal PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, PLUS, MINUS, EQUAL, VOID, LBRACK, RBRACK, READ, BREAK;
+terminal IF, ELSE;
+terminal CLASS, EXTENDS, CONST;
+terminal Character CHAR;
+terminal Boolean BOOL;
 terminal Integer NUMBER ;
-terminal Character CHAR ;
-terminal Boolean BOOL ;
 terminal String IDENT ;
-terminal IF, ELSE ;
-terminal PLUS, MINUS, MUL, DIV, MOD, EQ, NEQ, GT, GEQ, LT, LEQ, AND, OR, PLUSPLUS, MINUSMINUS ;
-terminal LBRACE, RBRACE, LBRACK, RBRACK, LPAREN, RPAREN ;
-terminal ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ; 
+terminal INC, DEC, FOR, OR, AND, NEQ, GT, GEQ, LT, LEQ, DOT, NEW, EQ;
+terminal ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ;
+terminal ADD, SUB, MUL, DIV, MOD;
+non terminal Program, ProgramName, GlobalParameterList, MethodList ;
+non terminal GlobalParameterType ;
+non terminal ConstDecl, ConstList, Constant, ConstAdditionalList, ConstType ;
+non terminal VarDecl, VarList, Var ; 
+non terminal ClassDecl, ClassExtended, ClassVarDecl, ClassMethodList ;
+non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, FormalParamList, FormalParamDecl;
+non terminal Type ;
+non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
+non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
+non terminal PrintExtension ; 
+non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
+non terminal Condition, ConditionTerm, ConditionFact ;
+non terminal IfStatement, IfCondition ;
+non terminal Expr, ExprList;
+non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
+non terminal IdentList, IdentDecl ;
+non terminal TermList, Term, FactorList, Factor ;
 
-non terminal Program ;
+precedence left ELSE;
 
-Program ::= PROG ;  
+Program ::= PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE ;
+
+ProgramName ::= IDENT ;
+
+
+
+GlobalParameterList ::= GlobalParameterList GlobalParameterType |
+                        /* epsilon */ ;
+
+GlobalParameterType ::= ConstDecl | 
+                        VarDecl |
+                        ClassDecl ;
+
+
+
+ConstDecl ::= CONST Type ConstList SEMI ;
+
+ConstList ::= Constant ConstAdditionalList ;
+
+ConstAdditionalList ::= COMMA Constant ConstAdditionalList |
+                        /* epsilon */;
+
+Constant ::= IDENT EQ ConstType ;
+
+ConstType ::= NUMBER |
+              CHAR |
+              BOOL ;
+
+
+
+VarDecl ::= Type VarList SEMI;
+
+VarList ::= Var COMMA VarList |
+            Var |            
+            error |
+            error COMMA VarList ;
+
+Var ::= IDENT |
+        IDENT LBRACK RBRACK ;
+
+Type ::= IDENT ;
+
+
+
+ClassDecl ::= CLASS IDENT ClassExtended LBRACE ClassVarDecl ClassMethodList RBRACE ;
+
+ClassExtended ::= EXTENDS Type |
+                  /* epsilon */ ;
+				  
+ClassVarDecl ::= VarList |
+                 /* epsilon */ ;
+				 
+ClassMethodList ::= LBRACE MethodList RBRACE | 
+                /* epsilon */ ;
+
+
+
+MethodList ::= MethodList MethodDecl |
+                    /* epsilon */ ;
+					
+MethodDecl ::= MethodStatic MethodReturnType LPAREN FormPars RPAREN VarDecl LBRACE StatementList RBRACE ;
+
+MethodStatic ::= STATIC |
+                 /* epsilon */ ;
+
+MethodReturnType ::= Type IDENT |
+                     VOID IDENT ;
+					 
+
+
+FormPars ::= FormalParamList | 
+             /* epsilon */ ;
+
+FormalParamList ::= FormalParamDecl COMMA FormalParamList |
+                    FormalParamDecl ;
+					
+FormalParamDecl ::= Type IDENT |
+                    Type IDENT LBRACK RBRACK ;
+
+
+
+StatementList ::= StatementList Statement |
+                  /* epsilon */ ;
+
+Statement ::= StatementMatched | 
+              StatementUnmatched ;
+	  
+StatementMatched ::=    ForStatement |
+                        DesignatorStatement |
+                        PrintStatement |
+                        ReturnStatement |
+                        ReadStatement |
+                        CONTINUE SEMI |
+                        BREAK SEMI ;
+
+StatementUnmatched ::=  LBRACE StatementList RBRACE |
+                        IfStatement ;
+
+
+
+DesignatorStatement ::= Designator:des DesignatorExtension ;
+
+DesignatorExtension ::= Assignop Expr |
+                        LPAREN DesignatorActParsOptional RPAREN |
+                        INC |
+                        DEC ;
+
+DesignatorActParsOptional ::= ActPars |
+                              /* epsilon */ ;
+
+
+
+PrintStatement ::= PRINT LPAREN Expr PrintExtension RPAREN SEMI ;
+
+PrintExtension ::= COMMA NUMBER | 
+                   /* epsilon */ ;
+
+
+
+ReturnStatement ::= RETURN SEMI |
+                    RETURN Expr SEMI ;
+		   
+
+
+ReadStatement ::= READ LPAREN Designator RPAREN SEMI ;
+
+
+
+ForStatement ::= FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement SEMI ;
+
+ForStatementDesignatorExtension ::= DesignatorStatement |
+                                    /* epsilon */ ;
+
+ForStatementConditionExtension ::= Condition |
+                                   /* epsilon */ ;
+
+
+
+IfStatement ::= IfCondition Statement ELSE Statement |
+                IfCondition Statement;
+
+IfCondition ::= IF LPAREN Condition RPAREN;
+
+
+
+Condition ::= ConditionTerm |
+              ConditionTerm OR Condition ;
+ 			   
+ConditionTerm ::= ConditionFact |
+                  ConditionFact  AND ConditionTerm ;
+ 				   
+ConditionFact ::= Expr | Expr Relop Expr ;
+
+Relop ::= EQ |
+          NEQ |
+          GT |
+          GEQ |
+          LT |
+          LEQ ; 
+
+
+
+Designator ::= IdentList ;
+
+IdentList ::= IdentDecl |		   
+              IdentList DOT IdentDecl ;
+		   	  
+IdentDecl ::= IDENT |
+              IDENT LBRACK Expr RBRACK ;
+
+
+
+ExprList ::= Expr | Expr COMMA ExprList ;			  
+			  
+Expr ::= TermList |
+         MINUS TermList ;
+
+ActPars ::= ExprList;		 
+	 
+
+
+TermList ::= Term |
+             Term Addop TermList ;		 
+
+Term ::= FactorList ;
+
+
+
+FactorList ::= Factor |
+               FactorList Mulop Factor ;
+
+Factor ::= NUMBER |
+           Designator |
+           Designator LPAREN ActPars RPAREN |
+           Designator LPAREN RPAREN |
+           CHAR |
+           BOOL |
+           LPAREN Expr RPAREN | 
+           NEW Type LBRACK Expr RBRACK |
+           NEW Type ;
+
+
+
+Addop ::= AddopLeft | AddopRight ;
+
+AddopLeft ::= PLUS |
+              MINUS ;
+
+AddopRight ::= ASSIGNPLUS | ASSIGNMINUS ;
+
+Mulop ::= MulopLeft | MulopRight ;
+
+MulopLeft ::= MUL | 
+              DIV |
+              MOD ;
+
+MulopRight ::= ASSIGNMUL | ASSIGNDIV | ASSIGNMOD ;
