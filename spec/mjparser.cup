@@ -4,35 +4,28 @@ import java_cup.runtime.*;
 import org.apache.log4j.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.*;
-import utils.ParserActionImplementer;
+import utils.*;
 
 // import java.io.*;
 
 
 parser code {:	
+    ParserActionImplementer impl = new ParserActionImplementer() ;	
     int printCallCount = 0;
 
     Logger log = Logger.getLogger(getClass());
      
     public void report_fatal_error(String message, Object info) throws java.lang.Exception {
       done_parsing();
-      report_error(message, info);
+      impl.reportError(message, info);
     }
   
     public void syntax_error(Symbol cur_token) {
-        report_error("\nSyntax error : ", cur_token);
+        impl.reportError("\nSyntax error : ", cur_token);
     }
   
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        report_fatal_error("Error : parsing has to be stopped", cur_token);
-    }
-
-    public void report_error(String message, Object info) {
-      System.err.print(message);
-      System.err.flush();
-      if (info instanceof Symbol)
-                System.err.println("Error : on line " + ((Symbol)info).left);
-      else System.err.println("");
+        impl.reportFatalError("Error : parsing has to be stopped", cur_token);
     }
 :}
 
@@ -54,22 +47,22 @@ scan with {:
     return s;
 :}
 
-terminal PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, VOID, LBRACK, RBRACK, READ, BREAK;
-terminal IF, ELSE;
-terminal CLASS, EXTENDS, CONST;
-terminal Character CHAR;
-terminal Boolean BOOL;
-terminal Integer NUMBER ;
-terminal String IDENT ;
-terminal INC, DEC, FOR, OR, AND, NEQ, GT, GEQ, LT, LEQ, DOT, NEW, EQ;
-terminal ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ;
-terminal ADD, SUB, MUL, DIV, MOD;
+terminal     PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, VOID, LBRACK, RBRACK, READ, BREAK;
+terminal     IF, ELSE;
+terminal     CLASS, EXTENDS, CONST;
+terminal     Character CHAR;
+terminal     Boolean BOOL;
+terminal     Integer NUMBER ;
+terminal     String IDENT ;
+terminal     INC, DEC, FOR, OR, AND, NEQ, GT, GEQ, LT, LEQ, DOT, NEW, EQ;
+terminal     ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ;
+terminal     ADD, SUB, MUL, DIV, MOD;
 non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
 non terminal ConstDecl, ConstList, Constant, ConstAdditionalList, ConstType ;
 non terminal VarDecl, VarList, Var ; 
-non terminal ClassDecl, ClassExtended, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
-non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDecl, FormalParamList, FormalParamDecl;
+non terminal ClassDecl, ClassExtended, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
+non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal Type ;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
 non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
@@ -85,10 +78,10 @@ non terminal TermList, Term, FactorList, Factor ;
 precedence left ELSE;
 
 //GLOBAL -----------------------------------------------------------------------
-Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE ;
+Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE {: impl.endProgram(); :};
 
 
-ProgramName ::= IDENT ;
+ProgramName ::= IDENT:progName {: RESULT = Tab.insert(Obj.Prog, progName.toString(), Tab.noType); impl.startProgram(progName); :} ;
 
 
 GlobalParameterList ::= 
@@ -115,7 +108,7 @@ ConstAdditionalList ::=
         |       /* epsilon */;
 
 
-Constant ::=    IDENT ASSIGN ConstType ;
+Constant ::=    IDENT ASSIGN ConstType {: impl.increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS); :} ;
 
 
 ConstType ::=   
@@ -135,8 +128,8 @@ VarList ::=     Var COMMA VarList
         |       error COMMA VarList ;
 
 
-Var ::=         IDENT 
-        |       IDENT LBRACK RBRACK ;
+Var ::=         IDENT {: impl.increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS); :} 
+        |       IDENT LBRACK RBRACK {: impl.increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS); :} ;
 
 
 Type ::=        IDENT ;
@@ -145,17 +138,20 @@ Type ::=        IDENT ;
 
 
 //CLASS ------------------------------------------------------------------------
-ClassDecl ::=   CLASS IDENT ClassExtended LBRACE ClassVarDecl ClassMethodList RBRACE ;
+ClassDecl ::=   CLASS IDENT ClassExtended LBRACE ClassVarDeclList ClassMethodList RBRACE ;
 
 
 ClassExtended ::=   
                 EXTENDS Type 
         |       /* epsilon */ ;
 
+ClassVarDeclList ::=
+                ClassVarDecl ClassVarDeclList
+        |       /* epsilon */ ;
+
 				  
 ClassVarDecl ::=    
-                Type ClassVarList SEMI
-        |       /* epsilon */ ;
+                Type ClassVarList SEMI ;
 
 
 ClassVarList ::=   
@@ -180,7 +176,7 @@ MethodList ::=  MethodList MethodDecl
         |       /* epsilon */ ;
 
 					
-MethodDecl ::=  MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDecl LBRACE StatementList RBRACE ;
+MethodDecl ::=  MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDeclList LBRACE StatementList RBRACE ;
 
 
 MethodStatic ::=    
@@ -189,9 +185,8 @@ MethodStatic ::=
 
 
 MethodReturnType ::=    
-                Type IDENT 
-        |       VOID IDENT 
-        |       IDENT; 					 
+                Type:methodType IDENT:methodName
+        |       VOID:methodType IDENT:methodName ;			 
 
 
 FormPars ::=    FormalParamList
@@ -208,9 +203,22 @@ FormalParamDecl ::=
         |       Type IDENT LBRACK RBRACK ;
 
 
-MethodVarDecl ::=   
-                VarDecl 
-        |       /* epsilon */ ; 
+MethodVarDeclList ::=   
+                MethodVarDecl SEMI MethodVarDeclList
+        |       MethodVarDecl
+        |       /* epsilon */ ;
+
+
+MethodVarDecl ::=     
+                Type MethodVarList ;
+
+MethodVarList ::= 
+                MethodVar MethodVarList
+        |       /* epsilon */ ;
+                
+
+MethodVar ::=   IDENT  
+        |       IDENT LBRACK RBRACK ;
 //------------------------------------------------------------------------------
 
 
@@ -358,10 +366,11 @@ FactorList ::=  Factor
         |       FactorList Mulop Factor ;
 
 
-Factor ::=      NUMBER 
-        |       Designator 
+Factor ::=       
+                Designator 
         |       Designator LPAREN ActPars RPAREN 
         |       Designator LPAREN RPAREN 
+        |       NUMBER
         |       CHAR 
         |       BOOL 
         |       LPAREN Expr RPAREN 
@@ -405,5 +414,7 @@ MulopLeft ::=   MUL
         |       MOD ;
 
 
-MulopRight ::= ASSIGNMUL | ASSIGNDIV | ASSIGNMOD ;
+MulopRight ::=  ASSIGNMUL 
+        |       ASSIGNDIV 
+        |       ASSIGNMOD ;
 //------------------------------------------------------------------------------

@@ -1,41 +1,56 @@
-program P
-        const int size = 10; 
-	class Table {
-            int pos[], neg[];
-            {
-                putp (int a, int idx) {this.pos[idx]=a;} 
-                putn (int a, int idx) { this.neg[idx]=a;} 
-                getp (int idx) { return pos[idx]; }
-                getn (int idx) { return neg[idx]; }
-            }
-	}
-	Table val; 
+program Program
+      class A {
+            int x[],y[];
+      }
+      const int pi = 3, e = 2;
+      class B extends A{
+            int i; int x[];
+        {
+            int getValue(int a) 
+            int 
+            b
+            ; 
+            bool c;
+            { 
+            return 
+            this
+            .
+            i 
+            + 
+            this
+            .
+            x
+            [
+            0
+            ] 
+            + 
+            a
+            ;
+             }
+        }
+      }
+      class C extends B{
+            A theA;
+            int a; 
+      }
 {
-	void
-	  main()
-  	  int x, i;
-  	{ //‐‐‐‐‐‐‐‐‐‐ Initialize val
-	    val = new Table; 
-	    val.pos = new int [size]; 
-	    val.neg = new int [size];
-	    for (i = 0; i<size; i++)
+
+      void main() A a; C c; int i; int x[];
+      {
+            a = new A;
+            a.x = new int[5];
+            a.y = new int[5];
+            c = new C;
+            c.theA = a;
+            c.x = new int[5];
+            x = new int[3];
+            i=0;
+            read(c.i);
+            for(; i<5; i++)
             {
-                val.putp(0,i);
-                val.putn(0,i); 
+                  read(c.x[i]);
+                  read(c.theA.x[i]);
             }
-            //‐‐‐‐‐‐‐‐‐‐ Read values 
-            read(x);
-            for (;x > 0;)
-            {
-                if (0 <= x && x < size) 
-                {
-                    val.putp(val.getp(x)+1); 
-                } else
-                    if (-size < x && x < 0) 
-                    {
-                        val.putn(val.getn(-x)+1); 
-                    }
-                read(x);
-            }
-	} 
+            print(c.getValue(c.theA.x[0]));
+      }
 }
