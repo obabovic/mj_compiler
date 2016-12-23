@@ -48,28 +48,28 @@ return new_symbol(sym.EOF);
 "return" {return new_symbol(sym.RETURN, yytext());}
 "void" {return new_symbol(sym.VOID, yytext());}
 "static" {return new_symbol(sym.STATIC, yytext());}
-";" {return new_symbol(sym.SEMI);}
-"," {return new_symbol(sym.COMMA);}
-"." {return new_symbol(sym.DOT);}
-"(" {return new_symbol(sym.LPAREN);}
-")" {return new_symbol(sym.RPAREN);}
-"{" {return new_symbol(sym.LBRACE);}
-"}" {return new_symbol(sym.RBRACE);}
-"[" {return new_symbol(sym.LBRACK);}
-"]" {return new_symbol(sym.RBRACK);}
+";" {return new_symbol(sym.SEMI, yytext());}
+"," {return new_symbol(sym.COMMA, yytext());}
+"." {return new_symbol(sym.DOT, yytext());}
+"(" {return new_symbol(sym.LPAREN, yytext());}
+")" {return new_symbol(sym.RPAREN, yytext());}
+"{" {return new_symbol(sym.LBRACE, yytext());}
+"}" {return new_symbol(sym.RBRACE, yytext());}
+"[" {return new_symbol(sym.LBRACK, yytext());}
+"]" {return new_symbol(sym.RBRACK, yytext());}
 "++" {return new_symbol(sym.INC, yytext());}
 "--" {return new_symbol(sym.DEC, yytext());}
 "+" {return new_symbol(sym.ADD, yytext());}
-"-" {return new_symbol(sym.SUB);}
-"*" {return new_symbol(sym.MUL);} 
-"/" {return new_symbol(sym.DIV);}
-"%" {return new_symbol(sym.MOD);}
+"-" {return new_symbol(sym.SUB, yytext());}
+"*" {return new_symbol(sym.MUL, yytext());} 
+"/" {return new_symbol(sym.DIV, yytext());}
+"%" {return new_symbol(sym.MOD, yytext());}
 "==" {return new_symbol(sym.EQ, yytext());}
 "!=" {return new_symbol(sym.NEQ, yytext());}
 ">=" {return new_symbol(sym.GEQ, yytext());}
 "<=" {return new_symbol(sym.LEQ, yytext());}
-">" {return new_symbol(sym.GT);}
-"<" {return new_symbol(sym.LT);}
+">" {return new_symbol(sym.GT, yytext());}
+"<" {return new_symbol(sym.LT, yytext());}
 "=" {return new_symbol(sym.ASSIGN, yytext());}
 "+=" {return new_symbol(sym.ASSIGNPLUS, yytext());}
 "-=" {return new_symbol(sym.ASSIGNMINUS, yytext());}
@@ -83,9 +83,11 @@ return new_symbol(sym.EOF);
 
 <COMMENT>. {yybegin(COMMENT);}
 <COMMENT>"\r\n" {yybegin(YYINITIAL);}
-[0-9]+ {return new_symbol(sym.NUMBER, new Integer (yytext()));}
-([a-z]|[A-Z])[a-z|A-Z|0-9|_]* {return new_symbol (sym.IDENT, yytext());}
-("true" | "false") {return new_symbol (sym.BOOL, Boolean.valueOf(yytext()));}
+
 "'"[\040-\176]"'" {return new_symbol (sym.CHAR, new Character (yytext().charAt(1)));}
+[0-9]+ {return new_symbol(sym.NUMBER, new Integer (yytext()));}
+("true" | "false") {return new_symbol (sym.BOOL, Boolean.valueOf(yytext()));}
+([a-z]|[A-Z])[a-z|A-Z|0-9|_]* {return new_symbol (sym.IDENT, yytext());}
+
 
 . {System.err.println("Lexical error ("+yytext()+") on line "+(yyline+1));}

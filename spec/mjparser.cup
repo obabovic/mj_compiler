@@ -9,14 +9,10 @@ import utils.ParserActionImplementer;
 // import java.io.*;
 
 
-parser code {:
-	
-	int printCallCount = 0;
-	
-	Logger log = Logger.getLogger(getClass());
-   
-    //REDEFINE LOGGER METHODS
-    //======================================================================================
+parser code {:	
+    int printCallCount = 0;
+
+    Logger log = Logger.getLogger(getClass());
      
     public void report_fatal_error(String message, Object info) throws java.lang.Exception {
       done_parsing();
@@ -31,37 +27,34 @@ parser code {:
         report_fatal_error("Error : parsing has to be stopped", cur_token);
     }
 
-    public void report_error(String message, Object info)
-      {
-        System.err.print(message);
-        System.err.flush();
-        if (info instanceof Symbol)
-                  System.err.println("Error : on line " + ((Symbol)info).left);
-        else System.err.println("");
-      }
+    public void report_error(String message, Object info) {
+      System.err.print(message);
+      System.err.flush();
+      if (info instanceof Symbol)
+                System.err.println("Error : on line " + ((Symbol)info).left);
+      else System.err.println("");
+    }
 :}
 
 
 action code {:
-	ParserActionImplementer impl = new ParserActionImplementer() ;
-	
+    ParserActionImplementer impl = new ParserActionImplementer() ;	
 :}
 
 
 init with {:
   Tab.init(); 
-  
 :}
 
 
 scan with {:
-	Symbol s = this.getScanner().next_token();
-	if (s != null && s.value != null) 
-		log.info(s.toString() + " " + s.value.toString());
-	return s;
+    Symbol s = this.getScanner().next_token();
+    if (s != null && s.value != null) 
+            log.info(s.toString() + " " + s.value.toString());
+    return s;
 :}
 
-terminal PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, PLUS, MINUS, EQUAL, VOID, LBRACK, RBRACK, READ, BREAK;
+terminal PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, VOID, LBRACK, RBRACK, READ, BREAK;
 terminal IF, ELSE;
 terminal CLASS, EXTENDS, CONST;
 terminal Character CHAR;
@@ -75,8 +68,8 @@ non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
 non terminal ConstDecl, ConstList, Constant, ConstAdditionalList, ConstType ;
 non terminal VarDecl, VarList, Var ; 
-non terminal ClassDecl, ClassExtended, ClassVarDecl, ClassMethodList ;
-non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, FormalParamList, FormalParamDecl;
+non terminal ClassDecl, ClassExtended, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
+non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDecl, FormalParamList, FormalParamDecl;
 non terminal Type ;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
 non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
@@ -113,7 +106,7 @@ ConstList ::= Constant ConstAdditionalList ;
 ConstAdditionalList ::= COMMA Constant ConstAdditionalList |
                         /* epsilon */;
 
-Constant ::= IDENT EQ ConstType ;
+Constant ::= IDENT ASSIGN ConstType ;
 
 ConstType ::= NUMBER |
               CHAR |
@@ -121,7 +114,7 @@ ConstType ::= NUMBER |
 
 
 
-VarDecl ::= Type VarList SEMI;
+VarDecl ::= Type VarList SEMI ;
 
 VarList ::= Var COMMA VarList |
             Var |            
@@ -140,26 +133,33 @@ ClassDecl ::= CLASS IDENT ClassExtended LBRACE ClassVarDecl ClassMethodList RBRA
 ClassExtended ::= EXTENDS Type |
                   /* epsilon */ ;
 				  
-ClassVarDecl ::= VarList |
-                 /* epsilon */ ;
+ClassVarDecl ::=    Type ClassVarList SEMI
+                    | /* epsilon */ ;
+
+ClassVarList ::=    ClassVar COMMA ClassVarList |
+                    ClassVar |            
+                    error |
+                    error COMMA ClassVarList ;
+
+ClassVar ::=    IDENT |
+                IDENT LBRACK RBRACK ;
 				 
 ClassMethodList ::= LBRACE MethodList RBRACE | 
-                /* epsilon */ ;
-
-
-
-MethodList ::= MethodList MethodDecl |
                     /* epsilon */ ;
+
+
+
+MethodList ::=  MethodList MethodDecl |
+                /* epsilon */ ;
 					
-MethodDecl ::= MethodStatic MethodReturnType LPAREN FormPars RPAREN VarDecl LBRACE StatementList RBRACE ;
+MethodDecl ::= MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDecl LBRACE StatementList RBRACE ;
 
 MethodStatic ::= STATIC |
                  /* epsilon */ ;
 
-MethodReturnType ::= Type IDENT |
-                     VOID IDENT ;
-					 
-
+MethodReturnType ::=    Type IDENT | 
+                        VOID IDENT | 
+                        IDENT; 					 
 
 FormPars ::= FormalParamList | 
              /* epsilon */ ;
@@ -170,6 +170,8 @@ FormalParamList ::= FormalParamDecl COMMA FormalParamList |
 FormalParamDecl ::= Type IDENT |
                     Type IDENT LBRACK RBRACK ;
 
+MethodVarDecl ::=   VarDecl | 
+                    /* epsilon */ ; 
 
 
 StatementList ::= StatementList Statement |
@@ -179,10 +181,10 @@ Statement ::= StatementMatched |
               StatementUnmatched ;
 	  
 StatementMatched ::=    ForStatement |
-                        DesignatorStatement |
-                        PrintStatement |
-                        ReturnStatement |
-                        ReadStatement |
+                        DesignatorStatement SEMI |
+                        PrintStatement SEMI |
+                        ReturnStatement SEMI |
+                        ReadStatement SEMI |
                         CONTINUE SEMI |
                         BREAK SEMI ;
 
@@ -203,23 +205,23 @@ DesignatorActParsOptional ::= ActPars |
 
 
 
-PrintStatement ::= PRINT LPAREN Expr PrintExtension RPAREN SEMI ;
+PrintStatement ::= PRINT LPAREN Expr PrintExtension RPAREN ;
 
 PrintExtension ::= COMMA NUMBER | 
                    /* epsilon */ ;
 
 
 
-ReturnStatement ::= RETURN SEMI |
-                    RETURN Expr SEMI ;
+ReturnStatement ::= RETURN |
+                    RETURN Expr ;
 		   
 
 
-ReadStatement ::= READ LPAREN Designator RPAREN SEMI ;
+ReadStatement ::= READ LPAREN Designator RPAREN ;
 
 
 
-ForStatement ::= FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement SEMI ;
+ForStatement ::= FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement ;
 
 ForStatementDesignatorExtension ::= DesignatorStatement |
                                     /* epsilon */ ;
@@ -244,13 +246,6 @@ ConditionTerm ::= ConditionFact |
  				   
 ConditionFact ::= Expr | Expr Relop Expr ;
 
-Relop ::= EQ |
-          NEQ |
-          GT |
-          GEQ |
-          LT |
-          LEQ ; 
-
 
 
 Designator ::= IdentList ;
@@ -266,7 +261,7 @@ IdentDecl ::= IDENT |
 ExprList ::= Expr | Expr COMMA ExprList ;			  
 			  
 Expr ::= TermList |
-         MINUS TermList ;
+         SUB TermList ;
 
 ActPars ::= ExprList;		 
 	 
@@ -293,11 +288,20 @@ Factor ::= NUMBER |
            NEW Type ;
 
 
+Relop ::= EQ |
+          NEQ |
+          GT |
+          GEQ |
+          LT |
+          LEQ ; 
+
+Assignop ::= ASSIGN | AddopRight | MulopRight ;
+
 
 Addop ::= AddopLeft | AddopRight ;
 
-AddopLeft ::= PLUS |
-              MINUS ;
+AddopLeft ::= ADD |
+              SUB ;
 
 AddopRight ::= ASSIGNPLUS | ASSIGNMINUS ;
 
