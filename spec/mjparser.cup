@@ -84,240 +84,326 @@ non terminal TermList, Term, FactorList, Factor ;
 
 precedence left ELSE;
 
-//GLOBAL ***********************************************************************
-Program ::= PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE ;
+//GLOBAL -----------------------------------------------------------------------
+Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE ;
+
 
 ProgramName ::= IDENT ;
 
 
-
-GlobalParameterList ::= GlobalParameterList GlobalParameterType |
-                        /* epsilon */ ;
-
-GlobalParameterType ::= ConstDecl | 
-                        VarDecl |
-                        ClassDecl ;
-//******************************************************************************
+GlobalParameterList ::= 
+                GlobalParameterList GlobalParameterType 
+        |       /* epsilon */ ;
 
 
-//CONSTANT *********************************************************************
-ConstDecl ::= CONST Type ConstList SEMI ;
-
-ConstList ::= Constant ConstAdditionalList ;
-
-ConstAdditionalList ::= COMMA Constant ConstAdditionalList |
-                        /* epsilon */;
-
-Constant ::= IDENT ASSIGN ConstType ;
-
-ConstType ::= NUMBER |
-              CHAR |
-              BOOL ;
-//******************************************************************************
+GlobalParameterType ::=    
+                ConstDecl
+        |       VarDecl 
+        |       ClassDecl ;
+//------------------------------------------------------------------------------
 
 
-//VARIABLE *********************************************************************
-VarDecl ::= Type VarList SEMI ;
-
-VarList ::= Var COMMA VarList |
-            Var |            
-            error |
-            error COMMA VarList ;
-
-Var ::= IDENT |
-        IDENT LBRACK RBRACK ;
-//******************************************************************************
-Type ::= IDENT ;
+//CONSTANT ---------------------------------------------------------------------
+ConstDecl ::=   CONST Type ConstList SEMI ;
 
 
-//CLASS ************************************************************************
-ClassDecl ::= CLASS IDENT ClassExtended LBRACE ClassVarDecl ClassMethodList RBRACE ;
+ConstList ::=   Constant ConstAdditionalList ;
 
-ClassExtended ::= EXTENDS Type |
-                  /* epsilon */ ;
+
+ConstAdditionalList ::= 
+                COMMA Constant ConstAdditionalList 
+        |       /* epsilon */;
+
+
+Constant ::=    IDENT ASSIGN ConstType ;
+
+
+ConstType ::=   
+                NUMBER 
+        |       CHAR 
+        |       BOOL ;
+//------------------------------------------------------------------------------
+
+
+//VARIABLE ---------------------------------------------------------------------
+VarDecl ::=     Type VarList SEMI ;
+
+
+VarList ::=     Var COMMA VarList 
+        |       Var 
+        |       error 
+        |       error COMMA VarList ;
+
+
+Var ::=         IDENT 
+        |       IDENT LBRACK RBRACK ;
+
+
+Type ::=        IDENT ;
+//------------------------------------------------------------------------------
+
+
+
+//CLASS ------------------------------------------------------------------------
+ClassDecl ::=   CLASS IDENT ClassExtended LBRACE ClassVarDecl ClassMethodList RBRACE ;
+
+
+ClassExtended ::=   
+                EXTENDS Type 
+        |       /* epsilon */ ;
+
 				  
-ClassVarDecl ::=    Type ClassVarList SEMI
-                    | /* epsilon */ ;
-
-ClassVarList ::=    ClassVar COMMA ClassVarList |
-                    ClassVar |            
-                    error |
-                    error COMMA ClassVarList ;
-
-ClassVar ::=    IDENT |
-                IDENT LBRACK RBRACK ;
-				 
-ClassMethodList ::= LBRACE MethodList RBRACE | 
-                    /* epsilon */ ;
-//******************************************************************************
+ClassVarDecl ::=    
+                Type ClassVarList SEMI
+        |       /* epsilon */ ;
 
 
-//METHOD ***********************************************************************
-MethodList ::=  MethodList MethodDecl |
-                /* epsilon */ ;
+ClassVarList ::=   
+                ClassVar COMMA ClassVarList 
+        |       ClassVar 
+        |       error 
+        |       error COMMA ClassVarList ;
+
+
+ClassVar ::=    IDENT 
+        |       IDENT LBRACK RBRACK ;
+	
+			 
+ClassMethodList ::= 
+                LBRACE MethodList RBRACE 
+        |       /* epsilon */ ;
+//------------------------------------------------------------------------------
+
+
+//METHOD -----------------------------------------------------------------------
+MethodList ::=  MethodList MethodDecl 
+        |       /* epsilon */ ;
+
 					
-MethodDecl ::= MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDecl LBRACE StatementList RBRACE ;
-
-MethodStatic ::= STATIC |
-                 /* epsilon */ ;
-
-MethodReturnType ::=    Type IDENT | 
-                        VOID IDENT | 
-                        IDENT; 					 
-
-FormPars ::= FormalParamList | 
-             /* epsilon */ ;
-
-FormalParamList ::= FormalParamDecl COMMA FormalParamList |
-                    FormalParamDecl ;
-					
-FormalParamDecl ::= Type IDENT |
-                    Type IDENT LBRACK RBRACK ;
-
-MethodVarDecl ::=   VarDecl | 
-                    /* epsilon */ ; 
-//******************************************************************************
+MethodDecl ::=  MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDecl LBRACE StatementList RBRACE ;
 
 
-//STATEMENT ********************************************************************
-StatementList ::= StatementList Statement |
-                  /* epsilon */ ;
+MethodStatic ::=    
+                STATIC 
+        |       /* epsilon */ ;
 
-Statement ::= StatementMatched | 
-              StatementUnmatched ;
+
+MethodReturnType ::=    
+                Type IDENT 
+        |       VOID IDENT 
+        |       IDENT; 					 
+
+
+FormPars ::=    FormalParamList
+        |       /* epsilon */ ;
+
+
+FormalParamList ::= 
+                FormalParamDecl COMMA FormalParamList 
+        |       FormalParamDecl ;
+	
+				
+FormalParamDecl ::= 
+                Type IDENT 
+        |       Type IDENT LBRACK RBRACK ;
+
+
+MethodVarDecl ::=   
+                VarDecl 
+        |       /* epsilon */ ; 
+//------------------------------------------------------------------------------
+
+
+//STATEMENT --------------------------------------------------------------------
+StatementList ::=   
+                StatementList Statement 
+        |       /* epsilon */ ;
+
+
+Statement ::=   StatementMatched 
+        |       StatementUnmatched ;
 	  
-StatementMatched ::=    ForStatement |
-                        DesignatorStatement SEMI |
-                        PrintStatement SEMI |
-                        ReturnStatement SEMI |
-                        ReadStatement SEMI |
-                        CONTINUE SEMI |
-                        BREAK SEMI ;
 
-StatementUnmatched ::=  LBRACE StatementList RBRACE |
-                        IfStatement ;
-//******************************************************************************
+StatementMatched ::=    
+                ForStatement 
+        |       DesignatorStatement SEMI    
+        |       PrintStatement SEMI 
+        |       ReturnStatement SEMI 
+        |       ReadStatement SEMI 
+        |       CONTINUE SEMI 
+        |       BREAK SEMI ;
 
 
-//DESIGNATOR STATEMENT *********************************************************
-DesignatorStatement ::= Designator:des DesignatorExtension ;
-
-Designator ::= IdentList ;
-
-DesignatorExtension ::= Assignop Expr |
-                        LPAREN DesignatorActParsOptional RPAREN |
-                        INC |
-                        DEC ;
-
-DesignatorActParsOptional ::= ActPars |
-                              /* epsilon */ ;
-//******************************************************************************
+StatementUnmatched ::=  
+                LBRACE StatementList RBRACE 
+        |       IfStatement ;
+//------------------------------------------------------------------------------
 
 
-//PRINT STATEMENT **************************************************************
-PrintStatement ::= PRINT LPAREN Expr PrintExtension RPAREN ;
-
-PrintExtension ::= COMMA NUMBER | 
-                   /* epsilon */ ;
-//******************************************************************************
+//DESIGNATOR STATEMENT ---------------------------------------------------------
+DesignatorStatement ::= 
+                Designator:des DesignatorExtension ;
 
 
-//RETURN STATEMENT *************************************************************
-ReturnStatement ::= RETURN |
-                    RETURN Expr ;
-//******************************************************************************		   
+Designator ::=  IdentList ;
 
 
-//READ STATEMENT ***************************************************************
-ReadStatement ::= READ LPAREN Designator RPAREN ;
-//******************************************************************************
+DesignatorExtension ::= 
+                Assignop Expr 
+        |       LPAREN DesignatorActParsOptional RPAREN 
+        |       INC 
+        |       DEC ;
 
 
-//FOR STATEMENT ****************************************************************
-ForStatement ::= FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement ;
-
-ForStatementDesignatorExtension ::= DesignatorStatement |
-                                    /* epsilon */ ;
-
-ForStatementConditionExtension ::= Condition |
-                                   /* epsilon */ ;
-//******************************************************************************
+DesignatorActParsOptional ::=  
+                ActPars 
+        |       /* epsilon */ ;
+//------------------------------------------------------------------------------
 
 
-//IF ELSE STATEMENT ************************************************************
-IfStatement ::= IfCondition Statement ELSE Statement |
-                IfCondition Statement;
+//PRINT STATEMENT --------------------------------------------------------------
+PrintStatement ::= 
+                PRINT LPAREN Expr PrintExtension RPAREN ;
 
-IfCondition ::= IF LPAREN Condition RPAREN;
 
-Condition ::= ConditionTerm |
-              ConditionTerm OR Condition ;
+PrintExtension ::=  
+                COMMA NUMBER 
+        |       /* epsilon */ ;
+//------------------------------------------------------------------------------
+
+
+//RETURN STATEMENT -------------------------------------------------------------
+ReturnStatement ::= 
+                RETURN 
+        |       RETURN Expr ;
+//------------------------------------------------------------------------------		   
+
+
+//READ STATEMENT ---------------------------------------------------------------
+ReadStatement ::= 
+                READ LPAREN Designator RPAREN ;
+//------------------------------------------------------------------------------
+
+
+//FOR STATEMENT ----------------------------------------------------------------
+ForStatement ::= 
+                FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement ;
+
+
+ForStatementDesignatorExtension ::= 
+                DesignatorStatement 
+        |       /* epsilon */ ;
+
+
+ForStatementConditionExtension ::=  
+                Condition 
+        |       /* epsilon */ ;
+//------------------------------------------------------------------------------
+
+
+//IF ELSE STATEMENT ------------------------------------------------------------
+IfStatement ::=     
+                IfCondition Statement ELSE Statement 
+        |       IfCondition Statement;
+
+
+IfCondition ::=     IF LPAREN Condition RPAREN;
+
+
+Condition ::=       
+                ConditionTerm 
+        |       ConditionTerm OR Condition ;
+
  			   
-ConditionTerm ::= ConditionFact |
-                  ConditionFact  AND ConditionTerm ;
- 				   
-ConditionFact ::= Expr | Expr Relop Expr ;
-//******************************************************************************
+ConditionTerm ::=   
+                ConditionFact 
+        |       ConditionFact  AND ConditionTerm ;
+ 		
+		   
+ConditionFact ::=   
+                Expr 
+        |       Expr Relop Expr ;
+//------------------------------------------------------------------------------
 
 
 
-//IDENT, EXPR ******************************************************************
-IdentList ::= IdentDecl |		   
-              IdentList DOT IdentDecl ;
+//IDENT, EXPR ------------------------------------------------------------------
+IdentList ::=   IdentDecl 
+        |       IdentList DOT IdentDecl ;
+
 		   	  
-IdentDecl ::= IDENT |
-              IDENT LBRACK Expr RBRACK ;
+IdentDecl ::=   IDENT 
+        |       IDENT LBRACK Expr RBRACK ;
 
-ExprList ::= Expr | Expr COMMA ExprList ;			  
+
+ExprList ::=    Expr 
+        |       Expr COMMA ExprList ;			  
+
 			  
-Expr ::= TermList |
-         SUB TermList ;
+Expr ::=        TermList 
+        |       SUB TermList ;
 
-ActPars ::= ExprList;		 
+
+ActPars ::=     ExprList;		 
+
 	 
-TermList ::= Term |
-             Term Addop TermList ;		 
-
-Term ::= FactorList ;
-
-FactorList ::= Factor |
-               FactorList Mulop Factor ;
-
-Factor ::= NUMBER |
-           Designator |
-           Designator LPAREN ActPars RPAREN |
-           Designator LPAREN RPAREN |
-           CHAR |
-           BOOL |
-           LPAREN Expr RPAREN | 
-           NEW Type LBRACK Expr RBRACK |
-           NEW Type ;
-//******************************************************************************
+TermList ::=    Term 
+        |       Term Addop TermList ;		 
 
 
-//OPERATION ********************************************************************
-Relop ::= EQ |
-          NEQ |
-          GT |
-          GEQ |
-          LT |
-          LEQ ; 
-
-Assignop ::= ASSIGN | AddopRight | MulopRight ;
+Term ::=        FactorList ;
 
 
-Addop ::= AddopLeft | AddopRight ;
+FactorList ::=  Factor 
+        |       FactorList Mulop Factor ;
 
-AddopLeft ::= ADD |
-              SUB ;
 
-AddopRight ::= ASSIGNPLUS | ASSIGNMINUS ;
+Factor ::=      NUMBER 
+        |       Designator 
+        |       Designator LPAREN ActPars RPAREN 
+        |       Designator LPAREN RPAREN 
+        |       CHAR 
+        |       BOOL 
+        |       LPAREN Expr RPAREN 
+        |       NEW Type LBRACK Expr RBRACK 
+        |       NEW Type ;
+//------------------------------------------------------------------------------
 
-Mulop ::= MulopLeft | MulopRight ;
 
-MulopLeft ::= MUL | 
-              DIV |
-              MOD ;
+//OPERATION --------------------------------------------------------------------
+Relop ::=       EQ 
+        |       NEQ 
+        |       GT
+        |       GEQ 
+        |       LT 
+        |       LEQ ; 
+
+
+Assignop ::=    ASSIGN 
+        |       AddopRight 
+        |       MulopRight ;
+
+
+Addop ::=       AddopLeft 
+        |       AddopRight ;
+
+
+AddopLeft ::=   ADD 
+        |       SUB ;
+
+
+AddopRight ::=  ASSIGNPLUS 
+        |       ASSIGNMINUS ;
+
+
+Mulop ::=       MulopLeft 
+        |       MulopRight ;
+
+
+MulopLeft ::=   MUL 
+        |       DIV 
+        |       MOD ;
+
 
 MulopRight ::= ASSIGNMUL | ASSIGNDIV | ASSIGNMOD ;
-//******************************************************************************
+//------------------------------------------------------------------------------
