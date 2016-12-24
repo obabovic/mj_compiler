@@ -114,7 +114,7 @@ Constant ::=    IDENT:constName ASSIGN ConstType:constValue {: impl.addConst(con
 
 ConstType ::=   
                 NUMBER:number {: RESULT = number; :}
-        |       CHAR:char {: RESULT = char; :}
+        |       CHAR:c {: RESULT = c; :}
         |       BOOL:bool {: RESULT = bool; :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
