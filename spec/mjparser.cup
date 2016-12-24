@@ -60,7 +60,7 @@ terminal     ADD, SUB, MUL, DIV, MOD;
 non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
 non terminal ConstDecl, ConstList, Constant, ConstType ;
-non terminal VarDecl, VarList, Var ; 
+non terminal GlobalVarDecl, GlobalVarList, GlobalVar ; 
 non terminal ClassDecl, ClassExtended, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
@@ -93,7 +93,7 @@ GlobalParameterList ::=
 
 GlobalParameterType ::=    
                 ConstDecl
-        |       VarDecl 
+        |       GlobalVarDecl 
         |       ClassDecl ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -122,17 +122,19 @@ ConstType ::=
 
 //VARIABLE ---------------------------------------------------------------------
 //------------------------------------------------------------------------------
-VarDecl ::=     Type VarList SEMI ;
+GlobalVarDecl ::=     
+                Type:varType {: impl.currentVarType = varType; :} GlobalVarList SEMI ;
 
 
-VarList ::=     Var COMMA VarList 
-        |       Var 
+GlobalVarList ::=     
+                GlobalVar COMMA GlobalVarList 
+        |       GlobalVar 
         |       error 
-        |       error COMMA VarList ;
+        |       error COMMA GlobalVarList ;
 
 
-Var ::=         IDENT {: impl.increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS); :} 
-        |       IDENT LBRACK RBRACK {: impl.increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS); :} ;
+GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL); :} 
+        |       IDENT:varName LBRACK RBRACK {: impl.addArray(varName, varNameleft, SymbolOrigin.GLOBAL); :} ;
 
 
 Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNameleft); :} ;

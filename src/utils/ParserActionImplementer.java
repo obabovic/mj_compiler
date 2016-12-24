@@ -124,15 +124,43 @@ public class ParserActionImplementer {
                 increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS);
             }
         }
-        
     }
     
-    public void addVar(String name, int line,boolean varIsGlobal) {
-        if(Tab.currentScope().findSymbol(name) != null)
-                reportError("Error! Variable \"" + name + "\" has already been declared. Line " , line);
+    public void addVar(String varName, int line, SymbolOrigin origin) {
+        if(Tab.currentScope().findSymbol(varName) != null)
+                reportError("Error! Variable \"" + varName + "\" has already been declared. Line " , line);
         else {
-            Obj temp = Tab.insert(Obj.Var, name, currentVarType);
-                
+            switch(origin) {
+                case GLOBAL:
+                    increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
+                    break;
+                case INNERCLASS:
+                    increment(SymbolOccurence.INNERCLASS_FIELD_DECLARATIONS);
+                    break;
+                case MAIN:
+                    increment(SymbolOccurence.MAIN_VAR_DEFINITIONS);
+                    break;
+                default:
+                    reportError("Error! Origin of variable \"" + varName + "\" is undefined. Line " , line);
+                    return;
+            }
+            Obj temp = Tab.insert(Obj.Var, varName, currentVarType);   
+        }
+    }
+    
+    public void addArray(String arrayName, int line, SymbolOrigin origin) {
+        if(Tab.currentScope().findSymbol(arrayName) != null)
+            reportError("Error! Variable \"" + arrayName + "\" has already been declared. Line " , line);
+        else {
+            switch(origin) {
+                case GLOBAL:
+                    increment(SymbolOccurence.GLOBAL_ARRAY_DEFINITIONS);
+                    break;
+                default:
+                    reportError("Error! Origin of variable \"" + arrayName + "\" is undefined. Line " , line);
+                    return;
+            }
+            Obj temp = Tab.insert(Obj.Var, arrayName, new Struct (Struct.Array, currentVarType));
         }
     }
     
