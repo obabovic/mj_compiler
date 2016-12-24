@@ -59,11 +59,10 @@ terminal     ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ;
 terminal     ADD, SUB, MUL, DIV, MOD;
 non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
-non terminal ConstDecl, ConstList, Constant, ConstAdditionalList, ConstType ;
+non terminal ConstDecl, ConstList, Constant, ConstType ;
 non terminal VarDecl, VarList, Var ; 
 non terminal ClassDecl, ClassExtended, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
-non terminal Type ;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
 non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
 non terminal PrintExtension ; 
@@ -75,9 +74,12 @@ non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, Mu
 non terminal IdentList, IdentDecl ;
 non terminal TermList, Term, FactorList, Factor ;
 
+non terminal Struct Type ;
+
 precedence left ELSE;
 
 //GLOBAL -----------------------------------------------------------------------
+//------------------------------------------------------------------------------
 Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE {: impl.endProgram(); :};
 
 
@@ -94,31 +96,32 @@ GlobalParameterType ::=
         |       VarDecl 
         |       ClassDecl ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //CONSTANT ---------------------------------------------------------------------
-ConstDecl ::=   CONST Type ConstList SEMI ;
+//------------------------------------------------------------------------------
+ConstDecl ::=   CONST Type:type {: impl.currentConstType = type; :} ConstList SEMI ;
 
 
-ConstList ::=   Constant ConstAdditionalList ;
-
-
-ConstAdditionalList ::= 
-                COMMA Constant ConstAdditionalList 
+ConstList ::=   ConstList Constant
+        |       ConstList COMMA Constant
         |       /* epsilon */;
 
 
-Constant ::=    IDENT ASSIGN ConstType {: impl.increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS); :} ;
+Constant ::=    IDENT:constName ASSIGN ConstType:constValue {: impl.addConst(constName, constValue, constNameleft); :} ;
 
 
 ConstType ::=   
-                NUMBER 
-        |       CHAR 
-        |       BOOL ;
+                NUMBER:number {: RESULT = number; :}
+        |       CHAR:char {: RESULT = char; :}
+        |       BOOL:bool {: RESULT = bool; :} ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
 //VARIABLE ---------------------------------------------------------------------
+//------------------------------------------------------------------------------
 VarDecl ::=     Type VarList SEMI ;
 
 
@@ -128,16 +131,18 @@ VarList ::=     Var COMMA VarList
         |       error COMMA VarList ;
 
 
-Var ::=         IDENT {: impl.increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS); :} 
-        |       IDENT LBRACK RBRACK {: impl.increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS); :} ;
+Var ::=         IDENT {: impl.increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS); :} 
+        |       IDENT LBRACK RBRACK {: impl.increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS); :} ;
 
 
-Type ::=        IDENT ;
+Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNameleft); :} ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
 
 //CLASS ------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 ClassDecl ::=   CLASS IDENT ClassExtended LBRACE ClassVarDeclList ClassMethodList RBRACE ;
 
 
@@ -169,9 +174,11 @@ ClassMethodList ::=
                 LBRACE MethodList RBRACE 
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //METHOD -----------------------------------------------------------------------
+//------------------------------------------------------------------------------
 MethodList ::=  MethodList MethodDecl 
         |       /* epsilon */ ;
 
@@ -185,8 +192,8 @@ MethodStatic ::=
 
 
 MethodReturnType ::=    
-                Type:methodType IDENT:methodName
-        |       VOID:methodType IDENT:methodName ;			 
+                Type:type IDENT:methodName {: impl.addMethod(methodName, type, methodNameleft); :}
+        |       VOID IDENT:methodName {: impl.addMethod(methodName, null, methodNameleft); :} ;			 
 
 
 FormPars ::=    FormalParamList
@@ -220,9 +227,11 @@ MethodVarList ::=
 MethodVar ::=   IDENT  
         |       IDENT LBRACK RBRACK ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //STATEMENT --------------------------------------------------------------------
+//------------------------------------------------------------------------------
 StatementList ::=   
                 StatementList Statement 
         |       /* epsilon */ ;
@@ -246,9 +255,11 @@ StatementUnmatched ::=
                 LBRACE StatementList RBRACE 
         |       IfStatement ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //DESIGNATOR STATEMENT ---------------------------------------------------------
+//------------------------------------------------------------------------------
 DesignatorStatement ::= 
                 Designator:des DesignatorExtension ;
 
@@ -267,9 +278,11 @@ DesignatorActParsOptional ::=
                 ActPars 
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //PRINT STATEMENT --------------------------------------------------------------
+//------------------------------------------------------------------------------
 PrintStatement ::= 
                 PRINT LPAREN Expr PrintExtension RPAREN ;
 
@@ -278,22 +291,28 @@ PrintExtension ::=
                 COMMA NUMBER 
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //RETURN STATEMENT -------------------------------------------------------------
+//------------------------------------------------------------------------------
 ReturnStatement ::= 
                 RETURN 
         |       RETURN Expr ;
 //------------------------------------------------------------------------------		   
+//------------------------------------------------------------------------------
 
 
 //READ STATEMENT ---------------------------------------------------------------
+//------------------------------------------------------------------------------
 ReadStatement ::= 
                 READ LPAREN Designator RPAREN ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
 //FOR STATEMENT ----------------------------------------------------------------
+//------------------------------------------------------------------------------
 ForStatement ::= 
                 FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement ;
 
@@ -307,9 +326,11 @@ ForStatementConditionExtension ::=
                 Condition 
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //IF ELSE STATEMENT ------------------------------------------------------------
+//------------------------------------------------------------------------------
 IfStatement ::=     
                 IfCondition Statement ELSE Statement 
         |       IfCondition Statement;
@@ -332,10 +353,12 @@ ConditionFact ::=
                 Expr 
         |       Expr Relop Expr ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 
 //IDENT, EXPR ------------------------------------------------------------------
+//------------------------------------------------------------------------------
 IdentList ::=   IdentDecl 
         |       IdentList DOT IdentDecl ;
 
@@ -377,9 +400,11 @@ Factor ::=
         |       NEW Type LBRACK Expr RBRACK 
         |       NEW Type ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 
 //OPERATION --------------------------------------------------------------------
+//------------------------------------------------------------------------------
 Relop ::=       EQ 
         |       NEQ 
         |       GT
@@ -417,4 +442,5 @@ MulopLeft ::=   MUL
 MulopRight ::=  ASSIGNMUL 
         |       ASSIGNDIV 
         |       ASSIGNMOD ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
