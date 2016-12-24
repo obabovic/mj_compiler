@@ -61,7 +61,9 @@ non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
 non terminal ConstDecl, ConstList, Constant, ConstType ;
 non terminal GlobalVarDecl, GlobalVarList, GlobalVar ; 
-non terminal ClassDecl, ClassExtended, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
+non terminal ClassDecl, ClassExtended, ClassMethodListOptional, ClassMethodDecl, ClassMethodStatic, ClassMethodReturnType, ClassFormPars, ClassMethodVarDeclList ;
+non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
+non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
 non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
@@ -145,12 +147,12 @@ Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNamele
 
 //CLASS ------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-ClassDecl ::=   CLASS IDENT ClassExtended LBRACE ClassVarDeclList ClassMethodList RBRACE ;
+ClassDecl ::=   CLASS IDENT:className {: impl.currentClassName = className; Tab.openScope(); :} ClassExtended LBRACE ClassVarDeclList ClassMethodListOptional RBRACE ;
 
 
 ClassExtended ::=   
-                EXTENDS Type 
-        |       /* epsilon */ ;
+                EXTENDS Type:parent {: impl.currentClassParent = parent; :} 
+        |       /* epsilon */ {: impl.currentClassParent = null; :} ;
 
 ClassVarDeclList ::=
                 ClassVarDecl ClassVarDeclList
@@ -158,7 +160,7 @@ ClassVarDeclList ::=
 
 				  
 ClassVarDecl ::=    
-                Type ClassVarList SEMI ;
+                Type:classVarType {: impl.currentVarType = classVarType; :} ClassVarList SEMI ;
 
 
 ClassVarList ::=   
@@ -168,13 +170,69 @@ ClassVarList ::=
         |       error COMMA ClassVarList ;
 
 
-ClassVar ::=    IDENT 
-        |       IDENT LBRACK RBRACK ;
+ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.INNERCLASS); :}
+        |       IDENT:classVarName LBRACK RBRACK {: impl.addArray(classVarName, classVarNameleft, SymbolOrigin.INNERCLASS); :};
 	
 			 
-ClassMethodList ::= 
-                LBRACE MethodList RBRACE 
+ClassMethodListOptional ::= 
+                LBRACE ClassMethodList RBRACE 
         |       /* epsilon */ ;
+
+ClassMethodList ::=  
+                ClassMethodList ClassMethodDecl 
+        |       /* epsilon */ ;
+
+					
+ClassMethodDecl ::=  
+                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList LBRACE ClassStatementList RBRACE ;
+
+
+ClassMethodStatic ::=    
+                STATIC 
+        |       /* epsilon */ ;
+
+
+ClassMethodReturnType ::=    
+                Type:type IDENT:methodName {: impl.addMethod(methodName, type, methodNameleft); :}
+        |       VOID IDENT:methodName {: impl.addMethod(methodName, null, methodNameleft); :} ;			 
+
+
+ClassFormPars ::=    
+                ClassFormalParamList
+        |       /* epsilon */ ;
+
+
+ClassFormalParamList ::= 
+                ClassFormalParamDecl COMMA ClassFormalParamList 
+        |       ClassFormalParamDecl ;
+	
+				
+ClassFormalParamDecl ::= 
+                Type IDENT 
+        |       Type IDENT LBRACK RBRACK ;
+
+
+ClassMethodVarDeclList ::=   
+                ClassMethodVarDecl SEMI ClassMethodVarDeclList
+        |       ClassMethodVarDecl
+        |       /* epsilon */ ;
+
+
+ClassMethodVarDecl ::=     
+                Type ClassMethodVarList ;
+
+ClassMethodVarList ::= 
+                ClassMethodVar ClassMethodVarList
+        |       /* epsilon */ ;
+                
+
+ClassMethodVar ::=   
+                IDENT  
+        |       IDENT LBRACK RBRACK ;
+
+ClassStatementList ::= 
+                StatementList ;
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -185,12 +243,12 @@ MethodList ::=  MethodList MethodDecl
         |       /* epsilon */ ;
 
 					
-MethodDecl ::=  MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDeclList LBRACE StatementList RBRACE ;
+MethodDecl ::=  MethodStatic:methodIsStatic MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
 
 
 MethodStatic ::=    
-                STATIC 
-        |       /* epsilon */ ;
+                STATIC {: impl.currentMethodIsStatic = true; :}
+        |       /* epsilon */ {: impl.currentMethodIsStatic = false; :} ;
 
 
 MethodReturnType ::=    

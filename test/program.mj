@@ -2,12 +2,15 @@ program Program
       class A {
             int x[],y[];
       }
-      const int pi = 'a', e = 2;
+      const int pi = 3, e = 2;
       class B extends A{
             int i; int x[];
         {
-            int getValue(int a) int b; bool c;
-            { return this.i + this.x[0] + a ; }
+            int getValue(int a) int b; bool c; 
+            { 
+            return 
+            this.i 
+            + this.x[0] + a ; }
         }
       }
       class C extends B{

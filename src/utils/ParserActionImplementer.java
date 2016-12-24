@@ -22,7 +22,16 @@ public class ParserActionImplementer {
     public Scope currentScope;
     public Struct currentVarType;
     public Struct currentConstType;
+    
+    public Obj currentMethod;
+    public String currentMethodName;
     public Struct currentMethodType;
+    public Boolean currentMethodIsStatic;
+    
+    
+    
+    public String currentClassName;
+    public Struct currentClassParent;
     
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
@@ -83,9 +92,19 @@ public class ParserActionImplementer {
             String tmp = "Error! Main function has not been found."; 
             reportError(tmp);
             log.info(tmp);
-        }	
+        }
+        presentSymbolOccurences();
 //        Tab.chainLocalSymbols(currentProgram);
         Tab.closeScope();
+    }
+    
+    public void presentSymbolOccurences() {
+        System.out.println("\n\n//-------- Presenting number of occurences for each item --------\\\\");
+        for (Map.Entry<SymbolOccurence, Integer> entry : mapOfEnumerations.entrySet())
+        {
+            System.out.println(entry.getKey() + " : " + entry.getValue());
+        }
+        System.out.println("//---------------------------------------------------------------\\\\\n\n");
     }
     
     public void increment(SymbolOccurence item) {
@@ -150,14 +169,17 @@ public class ParserActionImplementer {
     
     public void addArray(String arrayName, int line, SymbolOrigin origin) {
         if(Tab.currentScope().findSymbol(arrayName) != null)
-            reportError("Error! Variable \"" + arrayName + "\" has already been declared. Line " , line);
+            reportError("Error! Array \"" + arrayName + "\" has already been declared. Line " , line);
         else {
             switch(origin) {
                 case GLOBAL:
                     increment(SymbolOccurence.GLOBAL_ARRAY_DEFINITIONS);
                     break;
+                case INNERCLASS:
+                    increment(SymbolOccurence.INNERCLASS_FIELD_DECLARATIONS);
+                    break;
                 default:
-                    reportError("Error! Origin of variable \"" + arrayName + "\" is undefined. Line " , line);
+                    reportError("Error! Origin of array \"" + arrayName + "\" is undefined. Line " , line);
                     return;
             }
             Obj temp = Tab.insert(Obj.Var, arrayName, new Struct (Struct.Array, currentVarType));
@@ -165,15 +187,30 @@ public class ParserActionImplementer {
     }
     
     public void addMethod(String methodName, Struct methodType, int line) {
+        currentMethodName = methodName;
         currentMethodType = methodType;
-        if("main".equals(methodName)) {
-            mainIsDefined = true;
-        }
         
-        if(currentMethodType != null) {
+        if(Tab.currentScope().findSymbol(methodName) != null)
+            reportError("Error! Method \"" + methodName + "\" has already been declared. Line " , line);
+        else {
+            if("main".equals(methodName)) {
+                mainIsDefined = true;
+            }
             
-        } else {
-        
+            if(currentMethodType == null)
+                currentMethodType = Tab.noType;
+            
+            currentMethod = Tab.insert(Obj.Meth, currentMethodName, currentMethodType);
+            increment(SymbolOccurence.ALL_METHOD_DEFINITIONS);
+            Tab.openScope();
         }
+    }
+    
+    public void methodStart() {
+    
+    }
+    
+    public void methodEnd() {
+    
     }
 }

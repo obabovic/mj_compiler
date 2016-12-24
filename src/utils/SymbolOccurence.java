@@ -14,6 +14,8 @@ public enum SymbolOccurence {
     GLOBAL_VAR_DEFINITIONS,
     GLOBAL_ARRAY_DEFINITIONS,
     
+    ALL_METHOD_DEFINITIONS,
+    
     MAIN_VAR_DEFINITIONS,
     MAIN_METHOD_CALLS,
     
