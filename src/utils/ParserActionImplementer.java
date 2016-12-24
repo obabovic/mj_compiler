@@ -189,6 +189,15 @@ public class ParserActionImplementer {
         }
     }
     
+    public void classStart(String className) {
+        currentClassName = className; 
+        Tab.openScope(); 
+    }
+    
+    public void classEnd() {
+    
+    }
+    
     public void methodStart() {
     
     }

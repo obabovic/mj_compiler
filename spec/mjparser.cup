@@ -147,12 +147,13 @@ Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNamele
 
 //CLASS ------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-ClassDecl ::=   CLASS IDENT:className {: impl.currentClassName = className; Tab.openScope(); :} ClassExtended LBRACE ClassVarDeclList ClassMethodListOptional RBRACE ;
+ClassDecl ::=   CLASS IDENT:className {: impl.classStart(className); :} ClassExtended LBRACE ClassVarDeclList ClassMethodListOptional RBRACE {: impl.classEnd(); :};
 
 
 ClassExtended ::=   
                 EXTENDS Type:parent {: impl.currentClassParent = parent; :} 
         |       /* epsilon */ {: impl.currentClassParent = null; :} ;
+
 
 ClassVarDeclList ::=
                 ClassVarDecl ClassVarDeclList
@@ -177,6 +178,7 @@ ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft
 ClassMethodListOptional ::= 
                 LBRACE ClassMethodList RBRACE 
         |       /* epsilon */ ;
+
 
 ClassMethodList ::=  
                 ClassMethodList ClassMethodDecl 
@@ -235,6 +237,7 @@ ClassMethodVarListAdditional ::=
 ClassMethodVar ::=   
                 IDENT  
         |       IDENT LBRACK RBRACK ;
+
 
 ClassStatementList ::= 
                 StatementList ;
