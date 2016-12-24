@@ -63,8 +63,8 @@ non terminal ConstDecl, ConstList, Constant, ConstType ;
 non terminal GlobalVarDecl, GlobalVarList, GlobalVar ; 
 non terminal ClassDecl, ClassExtended, ClassMethodListOptional, ClassMethodDecl, ClassMethodStatic, ClassMethodReturnType, ClassFormPars, ClassMethodVarDeclList ;
 non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
-non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
-non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
+non terminal ClassMethodVar, ClassMethodVarListAdditional, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
+non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
 non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
 non terminal PrintExtension ; 
@@ -135,8 +135,8 @@ GlobalVarList ::=
         |       error COMMA GlobalVarList ;
 
 
-GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL); :} 
-        |       IDENT:varName LBRACK RBRACK {: impl.addArray(varName, varNameleft, SymbolOrigin.GLOBAL); :} ;
+GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, false); :} 
+        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, true); :} ;
 
 
 Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNameleft); :} ;
@@ -170,8 +170,8 @@ ClassVarList ::=
         |       error COMMA ClassVarList ;
 
 
-ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.INNERCLASS); :}
-        |       IDENT:classVarName LBRACK RBRACK {: impl.addArray(classVarName, classVarNameleft, SymbolOrigin.INNERCLASS); :};
+ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.LOCAL, false); :}
+        |       IDENT:classVarName LBRACK RBRACK {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.LOCAL, true); :};
 	
 			 
 ClassMethodListOptional ::= 
@@ -221,10 +221,16 @@ ClassMethodVarDeclList ::=
 ClassMethodVarDecl ::=     
                 Type ClassMethodVarList ;
 
+
 ClassMethodVarList ::= 
-                ClassMethodVar ClassMethodVarList
+                ClassMethodVar ClassMethodVarListAdditional 
         |       /* epsilon */ ;
-                
+
+
+ClassMethodVarListAdditional ::= 
+                COMMA ClassMethodVar ClassMethodVarListAdditional 
+        |       /* epsilon */ ;
+
 
 ClassMethodVar ::=   
                 IDENT  
@@ -266,8 +272,8 @@ FormalParamList ::=
 	
 				
 FormalParamDecl ::= 
-                Type IDENT 
-        |       Type IDENT LBRACK RBRACK ;
+                Type:type IDENT:name {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, false); :}
+        |       Type:type IDENT:name LBRACK RBRACK {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, true); :};
 
 
 MethodVarDeclList ::=   
@@ -277,15 +283,21 @@ MethodVarDeclList ::=
 
 
 MethodVarDecl ::=     
-                Type MethodVarList ;
+                Type:methodVarType {: impl.currentVarType = methodVarType; :} MethodVarList ;
+
 
 MethodVarList ::= 
-                MethodVar MethodVarList
+                MethodVar MethodVarListAdditional
         |       /* epsilon */ ;
                 
 
-MethodVar ::=   IDENT  
-        |       IDENT LBRACK RBRACK ;
+MethodVarListAdditional ::= 
+                COMMA MethodVar MethodVarListAdditional
+        |       /* epsilon */ ;
+
+
+MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, false); :} 
+        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, true); :};
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 

@@ -11,6 +11,7 @@ package utils;
  */
 public enum SymbolOrigin {
     GLOBAL,
-    MAIN,
-    INNERCLASS
+    LOCAL,
+    INNERCLASS,
+    UNIMPORTANT
 }

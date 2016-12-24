@@ -27,8 +27,7 @@ public class ParserActionImplementer {
     public String currentMethodName;
     public Struct currentMethodType;
     public Boolean currentMethodIsStatic;
-    
-    
+    public Boolean currentMethodHasReturn;
     
     public String currentClassName;
     public Struct currentClassParent;
@@ -145,7 +144,7 @@ public class ParserActionImplementer {
         }
     }
     
-    public void addVar(String varName, int line, SymbolOrigin origin) {
+    public void addVar(String varName, int line, SymbolOrigin origin, Boolean isArray) {
         if(Tab.currentScope().findSymbol(varName) != null)
                 reportError("Error! Variable \"" + varName + "\" has already been declared. Line " , line);
         else {
@@ -153,36 +152,21 @@ public class ParserActionImplementer {
                 case GLOBAL:
                     increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
                     break;
-                case INNERCLASS:
-                    increment(SymbolOccurence.INNERCLASS_FIELD_DECLARATIONS);
+                case LOCAL:
+                    increment(SymbolOccurence.LOCAL_VAR_DEFINITIONS);
                     break;
-                case MAIN:
-                    increment(SymbolOccurence.MAIN_VAR_DEFINITIONS);
+                case UNIMPORTANT:
                     break;
                 default:
                     reportError("Error! Origin of variable \"" + varName + "\" is undefined. Line " , line);
                     return;
             }
-            Obj temp = Tab.insert(Obj.Var, varName, currentVarType);   
-        }
-    }
-    
-    public void addArray(String arrayName, int line, SymbolOrigin origin) {
-        if(Tab.currentScope().findSymbol(arrayName) != null)
-            reportError("Error! Array \"" + arrayName + "\" has already been declared. Line " , line);
-        else {
-            switch(origin) {
-                case GLOBAL:
-                    increment(SymbolOccurence.GLOBAL_ARRAY_DEFINITIONS);
-                    break;
-                case INNERCLASS:
-                    increment(SymbolOccurence.INNERCLASS_FIELD_DECLARATIONS);
-                    break;
-                default:
-                    reportError("Error! Origin of array \"" + arrayName + "\" is undefined. Line " , line);
-                    return;
+            Obj temp;
+            if(isArray) {
+                temp = Tab.insert(Obj.Var, varName, new Struct (Struct.Array, currentVarType));
+            } else {
+                temp = Tab.insert(Obj.Var, varName, currentVarType);   
             }
-            Obj temp = Tab.insert(Obj.Var, arrayName, new Struct (Struct.Array, currentVarType));
         }
     }
     
@@ -201,7 +185,6 @@ public class ParserActionImplementer {
                 currentMethodType = Tab.noType;
             
             currentMethod = Tab.insert(Obj.Meth, currentMethodName, currentMethodType);
-            increment(SymbolOccurence.ALL_METHOD_DEFINITIONS);
             Tab.openScope();
         }
     }
@@ -211,6 +194,34 @@ public class ParserActionImplementer {
     }
     
     public void methodEnd() {
+        currentMethod = null;
+        Tab.closeScope();
+    }
+    
+    
+    //LEVEL 2
+    public void onGlobalMethodCalled() {
+    
+    }
+    
+    public void onArrayItemCalled() {
+    
+    }
+    
+    public void onMethodFormalArgumentCalled() {
+    
+    }
+    
+    //LEVEL 3
+    public void onInnerClassObjectCreated() {
+    
+    }
+    
+    public void onInnerclassFieldCalled() {
+    
+    }
+    
+    public void onInnerclassMethodCalled() {
     
     }
 }
