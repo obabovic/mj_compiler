@@ -140,6 +140,7 @@ public class ParserActionImplementer {
                 }
                 Tab.insert(Obj.Con, constName, currentConstType).setAdr(address);
                 increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS);
+                reportInfo("Global constant detected on line "+line);
             }
         }
     }
@@ -151,9 +152,11 @@ public class ParserActionImplementer {
             switch(origin) {
                 case GLOBAL:
                     increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
+                    reportInfo("Global variable detected on line "+line);
                     break;
                 case LOCAL:
                     increment(SymbolOccurence.LOCAL_VAR_DEFINITIONS);
+                    reportInfo("Local variable detected on line "+line);
                     break;
                 case UNIMPORTANT:
                     break;
@@ -189,6 +192,12 @@ public class ParserActionImplementer {
         }
     }
     
+    public void markReturn() {
+        if(currentMethod!=null) {
+            currentMethodHasReturn = true;
+        }
+    }
+    
     public void classStart(String className) {
         currentClassName = className; 
         Tab.openScope(); 
@@ -199,11 +208,14 @@ public class ParserActionImplementer {
     }
     
     public void methodStart() {
-    
+        currentMethodHasReturn = false;
     }
     
     public void methodEnd() {
+        if((currentMethod.getType() != Tab.noType) && (currentMethodHasReturn == false))
+            reportError("Error! Non void method has no return.");
         currentMethod = null;
+        currentMethodHasReturn = false;
         Tab.closeScope();
     }
     

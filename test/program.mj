@@ -7,10 +7,7 @@ program Program
             int i; int x[];
         {
             int getValue(int a) int b; bool c; 
-            { 
-            return 
-            this.i 
-            + this.x[0] + a ; }
+            { return this.i + this.x[0] + a ; }
         }
       }
       class C extends B{
