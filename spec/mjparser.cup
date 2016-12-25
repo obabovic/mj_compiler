@@ -186,7 +186,7 @@ ClassMethodList ::=
 
 					
 ClassMethodDecl ::=  
-                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList LBRACE ClassStatementList RBRACE ;
+                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList {: impl.methodStart(); :} LBRACE ClassStatementList RBRACE {: impl.methodEnd(); :};
 
 
 ClassMethodStatic ::=    
@@ -250,13 +250,8 @@ ClassStatementList ::=
 MethodList ::=  MethodList MethodDecl 
         |       /* epsilon */ ;
 
-					
-MethodDecl ::=  MethodStatic:methodIsStatic MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
 
-
-MethodStatic ::=    
-                STATIC {: impl.currentMethodIsStatic = true; :}
-        |       /* epsilon */ {: impl.currentMethodIsStatic = false; :} ;
+MethodDecl ::= MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
 
 
 MethodReturnType ::=    
@@ -371,7 +366,7 @@ PrintExtension ::=
 //RETURN STATEMENT -------------------------------------------------------------
 //------------------------------------------------------------------------------
 ReturnStatement ::= 
-                RETURN 
+                RETURN {: impl.markReturn(); :}
         |       RETURN Expr:expr {: impl.markReturn(); :} ;
 //------------------------------------------------------------------------------		   
 //------------------------------------------------------------------------------
