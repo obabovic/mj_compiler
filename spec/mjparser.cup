@@ -232,7 +232,9 @@ ClassMethodVarList ::=
 
 ClassMethodVar ::=   
                 IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, false); :}   
-        |       IDENT :varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
+        |       IDENT :varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} 
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line "+errleft); :}
+        |       error:err LBRACE {: impl.reportInfo("Successful error recovery on line "+errleft); :} ;
 
 
 ClassStatementList ::= 
@@ -290,7 +292,9 @@ MethodVarListAdditional ::=
 
 
 MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, false); :} 
-        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, true); :};
+        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, true); :}
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line " + errleft); :}
+        |       error:err LBRACE {: impl.reportInfo("Successful error recovery on line " + errleft); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
