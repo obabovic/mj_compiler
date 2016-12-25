@@ -63,10 +63,10 @@ non terminal ConstDecl, ConstList, Constant, ConstType ;
 non terminal GlobalVarDecl, GlobalVarList, GlobalVar ; 
 non terminal ClassDecl, ClassExtended, ClassMethodListOptional, ClassMethodDecl, ClassMethodStatic, ClassMethodReturnType, ClassFormPars, ClassMethodVarDeclList ;
 non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
-non terminal ClassMethodVar, ClassMethodVarListAdditional, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
-non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
+non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
+non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
+non terminal DesignatorStatement, Designator, DesignatorExtension, ActPars ;
 non terminal PrintExtension ; 
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal Condition, ConditionTerm, ConditionFact ;
@@ -131,8 +131,8 @@ GlobalVarDecl ::=
 GlobalVarList ::=     
                 GlobalVar COMMA GlobalVarList 
         |       GlobalVar 
-        |       error 
-        |       error COMMA GlobalVarList ;
+        |       error {: impl.reportInfo("Successful error recovery."); :}
+        |       error COMMA GlobalVarList {: impl.reportInfo("Successful error recovery."); :} ;
 
 
 GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, false); :} 
@@ -147,7 +147,7 @@ Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNamele
 
 //CLASS ------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-ClassDecl ::=   CLASS IDENT:className {: impl.classStart(className); :} ClassExtended LBRACE ClassVarDeclList ClassMethodListOptional RBRACE {: impl.classEnd(); :};
+ClassDecl ::=   CLASS IDENT:className ClassExtended:classExtended {: impl.classStart(className, classExtendedleft); :} LBRACE ClassVarDeclList ClassMethodListOptional RBRACE {: impl.classEnd(); :};
 
 
 ClassExtended ::=   
@@ -221,22 +221,18 @@ ClassMethodVarDeclList ::=
 
 
 ClassMethodVarDecl ::=     
-                Type ClassMethodVarList ;
+                Type:type {: impl.currentVarType = type; :} ClassMethodVarList ;
 
 
 ClassMethodVarList ::= 
-                ClassMethodVar ClassMethodVarListAdditional 
-        |       /* epsilon */ ;
-
-
-ClassMethodVarListAdditional ::= 
-                COMMA ClassMethodVar ClassMethodVarListAdditional 
+                ClassMethodVar
+        |       ClassMethodVar COMMA ClassMethodVarList
         |       /* epsilon */ ;
 
 
 ClassMethodVar ::=   
-                IDENT  
-        |       IDENT LBRACK RBRACK ;
+                IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, false); :}   
+        |       IDENT :varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
 
 
 ClassStatementList ::= 
@@ -330,22 +326,18 @@ StatementUnmatched ::=
 //DESIGNATOR STATEMENT ---------------------------------------------------------
 //------------------------------------------------------------------------------
 DesignatorStatement ::= 
-                Designator:des DesignatorExtension ;
+                Designator:des {:  :} DesignatorExtension ;
 
 
-Designator ::=  IdentList ;
+Designator ::=  IdentList:identList {: RESULT = identList; :} ;
 
 
 DesignatorExtension ::= 
                 Assignop Expr 
-        |       LPAREN DesignatorActParsOptional RPAREN 
-        |       INC 
-        |       DEC ;
-
-
-DesignatorActParsOptional ::=  
-                ActPars 
-        |       /* epsilon */ ;
+        |       LPAREN ActPars RPAREN
+        |       LPAREN RPAREN
+        |       INC:inc {:  :}
+        |       DEC:dec {:  :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -432,7 +424,7 @@ IdentList ::=   IdentDecl
         |       IdentList DOT IdentDecl ;
 
 		   	  
-IdentDecl ::=   IDENT 
+IdentDecl ::=   IDENT:ident {: :} 
         |       IDENT LBRACK Expr RBRACK ;
 
 

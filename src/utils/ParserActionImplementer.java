@@ -31,6 +31,7 @@ public class ParserActionImplementer {
     
     public String currentClassName;
     public Struct currentClassParent;
+    public Struct currentClass;
     
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
@@ -151,12 +152,19 @@ public class ParserActionImplementer {
         else {
             switch(origin) {
                 case GLOBAL:
-                    increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
-                    reportInfo("Global variable detected on line "+line);
+                    if(isArray) {
+                        increment(SymbolOccurence.GLOBAL_ARRAY_DEFINITIONS);
+                        reportInfo("Global array detected on line "+line);
+                    } else {
+                        increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
+                        reportInfo("Global variable detected on line "+line);
+                    }
                     break;
                 case LOCAL:
-                    increment(SymbolOccurence.LOCAL_VAR_DEFINITIONS);
-                    reportInfo("Local variable detected on line "+line);
+                    if((currentMethod!= null)&&("main".equals(currentMethod.getName()))) {
+                        increment(SymbolOccurence.MAIN_VAR_DEFINITIONS);
+                        reportInfo("Main method local variable detected on line "+line);
+                    }
                     break;
                 case UNIMPORTANT:
                     break;
@@ -198,8 +206,13 @@ public class ParserActionImplementer {
         }
     }
     
-    public void classStart(String className) {
-        currentClassName = className; 
+    public void classStart(String className, int line) {
+        currentClassName = className;
+        if(Tab.currentScope().findSymbol(currentClassName) != null)
+            reportError("Error! Class \"" + currentClassName + "\" has already been declared. Line " , line);
+        else {
+//            currentClass = Tab.insert(Obj.Elem, currentClassName, );
+        }
         Tab.openScope(); 
     }
     
@@ -217,6 +230,10 @@ public class ParserActionImplementer {
         currentMethod = null;
         currentMethodHasReturn = false;
         Tab.closeScope();
+    }
+    
+    public void designatorCheckType(String des) {
+    
     }
     
     
