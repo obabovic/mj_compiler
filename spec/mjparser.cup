@@ -66,19 +66,19 @@ non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, Cla
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, Designator, DesignatorExtension, ActPars ;
+non terminal DesignatorStatement, DesignatorExtension, ActPars ;
 non terminal PrintExtension ; 
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal Condition, ConditionTerm, ConditionFact ;
 non terminal IfStatement, IfCondition ;
-non terminal Expr, ExprList;
 non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
-non terminal IdentList, IdentDecl ;
-non terminal TermList, Term, FactorList, Factor ;
 
-non terminal Struct Type ;
+non terminal Obj Designator, IdentList, IdentDecl ;
+non terminal Struct Type, Expr, ExprList, Term, TermList, Factor, FactorList ;
 
 precedence left ELSE;
+
+
 
 //GLOBAL -----------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -101,6 +101,7 @@ GlobalParameterType ::=
 //------------------------------------------------------------------------------
 
 
+
 //CONSTANT ---------------------------------------------------------------------
 //------------------------------------------------------------------------------
 ConstDecl ::=   CONST Type:type {: impl.currentConstType = type; :} ConstList SEMI ;
@@ -120,6 +121,7 @@ ConstType ::=
         |       BOOL:bool {: RESULT = bool; :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+
 
 
 //VARIABLE ---------------------------------------------------------------------
@@ -210,8 +212,8 @@ ClassFormalParamList ::=
 	
 				
 ClassFormalParamDecl ::= 
-                Type IDENT 
-        |       Type IDENT LBRACK RBRACK ;
+                Type:type IDENT:varName {: impl.currentVarType = type; impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, false); :}
+        |       Type:type IDENT:varName LBRACK RBRACK {: impl.currentVarType = type; impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
 
 
 ClassMethodVarDeclList ::=   
@@ -243,13 +245,14 @@ ClassStatementList ::=
 //------------------------------------------------------------------------------
 
 
+
 //METHOD -----------------------------------------------------------------------
 //------------------------------------------------------------------------------
 MethodList ::=  MethodList MethodDecl 
         |       /* epsilon */ ;
 
 
-MethodDecl ::= MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
+MethodDecl ::=  MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
 
 
 MethodReturnType ::=    
@@ -299,6 +302,7 @@ MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin
 //------------------------------------------------------------------------------
 
 
+
 //STATEMENT --------------------------------------------------------------------
 //------------------------------------------------------------------------------
 StatementList ::=   
@@ -327,23 +331,26 @@ StatementUnmatched ::=
 //------------------------------------------------------------------------------
 
 
+
 //DESIGNATOR STATEMENT ---------------------------------------------------------
 //------------------------------------------------------------------------------
 DesignatorStatement ::= 
-                Designator:des {:  :} DesignatorExtension ;
+                Designator:des Assignop:op Expr:expr {: :}
+        |       Designator:des LPAREN ActPars RPAREN {:  :}
+        |       Designator:des LPAREN RPAREN {:  :}
+        |       Designator:des INC:inc {:  :}
+        |       Designator:des DEC:dec {:  :} ;
 
 
-Designator ::=  IdentList:identList {: RESULT = identList; :} ;
+Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
+        |       IdentDecl DOT Designator ;
 
-
-DesignatorExtension ::= 
-                Assignop Expr 
-        |       LPAREN ActPars RPAREN
-        |       LPAREN RPAREN
-        |       INC:inc {:  :}
-        |       DEC:dec {:  :} ;
+		   	  
+IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft); :} 
+        |       IDENT:ident LBRACK Expr RBRACK {: RESULT = impl.resolveIdentificator(ident, identleft); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+
 
 
 //PRINT STATEMENT --------------------------------------------------------------
@@ -359,6 +366,7 @@ PrintExtension ::=
 //------------------------------------------------------------------------------
 
 
+
 //RETURN STATEMENT -------------------------------------------------------------
 //------------------------------------------------------------------------------
 ReturnStatement ::= 
@@ -368,12 +376,14 @@ ReturnStatement ::=
 //------------------------------------------------------------------------------
 
 
+
 //READ STATEMENT ---------------------------------------------------------------
 //------------------------------------------------------------------------------
 ReadStatement ::= 
                 READ LPAREN Designator RPAREN ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+
 
 
 //FOR STATEMENT ----------------------------------------------------------------
@@ -394,6 +404,7 @@ ForStatementConditionExtension ::=
 //------------------------------------------------------------------------------
 
 
+
 //IF ELSE STATEMENT ------------------------------------------------------------
 //------------------------------------------------------------------------------
 IfStatement ::=     
@@ -401,7 +412,7 @@ IfStatement ::=
         |       IfCondition Statement;
 
 
-IfCondition ::=     IF LPAREN Condition RPAREN;
+IfCondition ::= IF LPAREN Condition RPAREN;
 
 
 Condition ::=       
@@ -422,50 +433,43 @@ ConditionFact ::=
 
 
 
-//IDENT, EXPR ------------------------------------------------------------------
+//EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-IdentList ::=   IdentDecl 
-        |       IdentList DOT IdentDecl ;
-
-		   	  
-IdentDecl ::=   IDENT:ident {: :} 
-        |       IDENT LBRACK Expr RBRACK ;
+ActPars ::=     ExprList:exprList {: RESULT = exprList; :};
 
 
-ExprList ::=    Expr 
+ExprList ::=    Expr:expr {: RESULT = expr; :}
         |       Expr COMMA ExprList ;			  
 
 			  
-Expr ::=        TermList 
+Expr ::=        TermList:termList {: RESULT = termList; :}
         |       SUB TermList ;
-
-
-ActPars ::=     ExprList;		 
-
+		 
 	 
-TermList ::=    Term 
+TermList ::=    Term:term {: RESULT = term; :}
         |       Term Addop TermList ;		 
 
 
-Term ::=        FactorList ;
+Term ::=        FactorList:factorList {: RESULT = factorList; :}  ;
 
 
-FactorList ::=  Factor 
+FactorList ::=  Factor:factor {: RESULT = factor; :} 
         |       FactorList Mulop Factor ;
 
 
 Factor ::=       
-                Designator 
-        |       Designator LPAREN ActPars RPAREN 
-        |       Designator LPAREN RPAREN 
-        |       NUMBER
-        |       CHAR 
-        |       BOOL 
-        |       LPAREN Expr RPAREN 
-        |       NEW Type LBRACK Expr RBRACK 
-        |       NEW Type ;
+                Designator:des {: RESULT = impl.factorNewDesignator(des, desleft); :}
+        |       Designator:des LPAREN RPAREN {: RESULT = impl.factorNewMethod(des, desleft); :}
+        |       Designator:des LPAREN ActPars:params RPAREN {: RESULT = impl.factorNewMethod(des, desleft); :}
+        |       NUMBER:num {: RESULT = impl.factorNewNumber(num); :}
+        |       CHAR:c {: RESULT = impl.factorNewChar(c); :}
+        |       BOOL:bool {: RESULT = impl.factorNewBool(bool); :}
+        |       LPAREN Expr:expr RPAREN {: RESULT = impl.factorNewExpr(expr, exprleft); :}
+        |       NEW Type:type LBRACK Expr:expr RBRACK  {: RESULT = impl.factorNewArray(type, expr, typeleft); :}
+        |       NEW Type:type {: RESULT = impl.factorNewClass(type, typeleft); :} ; //neterminal mora da oznacava unutrasnju klasu
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+
 
 
 //OPERATION --------------------------------------------------------------------

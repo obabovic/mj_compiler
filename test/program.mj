@@ -6,8 +6,8 @@ program Program
       class B extends A{
             int i; int x[];
         {
-            int getValue(int a) int b; bool c;
-            { return this.i + this.x[0] + a ; }
+            int getValue(int a) int b; bool c; 
+            { return a ; }
         }
       }
       class C extends B{
@@ -17,7 +17,7 @@ program Program
 {
 
       void main() A a; C c; int i; int x[];
-      {
+      {     
             a = new A;
             a.x = new int[5];
             a.y = new int[5];

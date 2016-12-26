@@ -31,7 +31,7 @@ public class ParserActionImplementer {
     
     public String currentClassName;
     public Struct currentClassParent;
-    public Struct currentClass;
+    public Obj currentClass;
     
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
@@ -74,6 +74,8 @@ public class ParserActionImplementer {
       reportError(message, info);
     }
     
+    
+    
     public void startProgram(String progName) {
         reportInfo("Program named \""+progName+"\" STARTED.");
         Tab.insert(Obj.Type, "int", intType);
@@ -107,11 +109,15 @@ public class ParserActionImplementer {
         System.out.println("//---------------------------------------------------------------\\\\\n\n");
     }
     
+    
+    
     public void increment(SymbolOccurence item) {
         mapOfEnumerations.putIfAbsent(item, 0);
         int tmp = mapOfEnumerations.get(item);
         mapOfEnumerations.put(item, tmp+1);
     }
+    
+    
     
     public Struct resolveType(String typeName, int line) {
         Struct res = null;
@@ -121,6 +127,28 @@ public class ParserActionImplementer {
         res = obj.getType();
         return res;
     }
+    
+    public Obj resolveIdentificator(String ident, int line) {
+        Obj res = null;
+        Obj temp = Tab.find(ident);
+        if(temp.equals(Tab.noObj)) {
+            res = Tab.noObj;
+        } else {
+            res = temp;
+        }
+        return res;
+    }
+    
+    public Struct compareTypes(Struct item1, Struct item2, int line) {
+        Struct res = null;
+        if(item1.assignableTo(item2))
+            res = item1;
+        else
+            reportError("Error! Types are incompatible on line "+line);
+        return res;
+    }
+    
+    
     
     public void addConst(String constName, Object constValue, int line) {
         if(Tab.currentScope().findSymbol(constName) != null) {
@@ -141,7 +169,6 @@ public class ParserActionImplementer {
                 }
                 Tab.insert(Obj.Con, constName, currentConstType).setAdr(address);
                 increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS);
-                reportInfo("Global constant detected on line "+line);
             }
         }
     }
@@ -154,16 +181,13 @@ public class ParserActionImplementer {
                 case GLOBAL:
                     if(isArray) {
                         increment(SymbolOccurence.GLOBAL_ARRAY_DEFINITIONS);
-                        reportInfo("Global array detected on line "+line);
                     } else {
                         increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
-                        reportInfo("Global variable detected on line "+line);
                     }
                     break;
                 case LOCAL:
                     if((currentMethod!= null)&&("main".equals(currentMethod.getName()))) {
                         increment(SymbolOccurence.MAIN_VAR_DEFINITIONS);
-                        reportInfo("Main method local variable detected on line "+line);
                     }
                     break;
                 case UNIMPORTANT:
@@ -200,25 +224,34 @@ public class ParserActionImplementer {
         }
     }
     
+    
+    
     public void markReturn() {
         if(currentMethod!=null) {
             currentMethodHasReturn = true;
         }
     }
     
+    
+    
     public void classStart(String className, int line) {
         currentClassName = className;
         if(Tab.currentScope().findSymbol(currentClassName) != null)
             reportError("Error! Class \"" + currentClassName + "\" has already been declared. Line " , line);
         else {
-//            currentClass = Tab.insert(Obj.Elem, currentClassName, );
+            Struct type = new Struct(Struct.Class);
+            currentClass = Tab.insert(Obj.Type, currentClassName, type);
+            Tab.openScope(); 
         }
-        Tab.openScope(); 
     }
     
     public void classEnd() {
-    
+        Tab.chainLocalSymbols(currentClass);
+        Tab.closeScope();
+        currentClass = null;
     }
+    
+    
     
     public void methodStart() {
         currentMethodHasReturn = false;
@@ -232,8 +265,90 @@ public class ParserActionImplementer {
         Tab.closeScope();
     }
     
+    
+    
     public void designatorCheckType(String des) {
     
+    }
+    
+    public Struct factorNewDesignator(Obj designator, int line) {
+        Struct res = null;
+        if(designator == Tab.noObj) {
+            res = Tab.noType;
+        } else {
+            res = designator.getType();
+        }
+        return res;
+    }
+    
+    public Struct factorNewMethod(Obj designator, int line) {
+        Struct res = null;
+        if(Obj.Meth != designator.getKind()) {
+            reportError("Error! Method "+designator.getName()+" is undefined or the designator is not a method at all. Line ", line);
+            res = Tab.noType;
+        } else {
+            Obj temp = Tab.find(designator.getName());
+            if(temp == null) {
+                reportError("Error! Method is undefined on line ", line);
+            } else if (temp.getType() == Tab.noType) {
+                reportError("Error! Method is type of void and used as Rvalue on line ", line);
+            } else {
+                //TODO: generate valid designator code expression 
+            }
+            res = (temp != null)?temp.getType():Tab.noType;
+        }
+        return res;
+    }
+    
+    public Struct factorNewNumber(Integer number) {
+        Struct res = null;
+        Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
+        temp.setAdr(number.intValue());
+        res = temp.getType();
+        return res;
+    }
+    
+    public Struct factorNewChar(Character ch) {
+        Struct res = null;
+        Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
+        temp.setAdr(ch.charValue());
+        res = temp.getType();
+        return res;
+    }
+    
+    public Struct factorNewBool(Boolean b) {
+        Struct res = null;
+        Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
+        temp.setAdr((b.booleanValue()==true)?1:0);
+        res = temp.getType();
+        return res;
+    }
+    
+    public Struct factorNewExpr(Struct expr, int line) {
+        Struct res = null;
+        res = expr;
+        return res;
+    }
+    
+    public Struct factorNewArray(Struct type, Struct expr, int line) {
+        Struct res = null;
+        if(!Tab.intType.equals(expr)) {
+            reportError("Error! Expression must be of type Integer on line ", line);
+        } else {
+            res = new Struct(Struct.Array, type);
+        }
+        return res;
+    }
+    
+    public Struct factorNewClass(Struct type, int line) {
+        Struct res = null;
+        Struct temp = new Struct(Struct.Class);
+        if(!type.assignableTo(temp)) {
+            reportError("Error! Element must be of type Class on line ", line);
+            res = Tab.noType;
+        } else 
+            res = type;
+        return res;
     }
     
     

@@ -32,6 +32,8 @@ return new_symbol(sym.EOF);
 "\b" {}
 "\t" {}
 "\r\n" {}
+"\r" {}
+"\n" {}
 "\f" {}
 "program" {return new_symbol(sym.PROG, yytext());}
 "new"   {return new_symbol(sym.NEW, yytext());}
