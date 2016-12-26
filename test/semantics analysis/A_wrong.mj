@@ -1,5 +1,7 @@
 program Program 
       const int pi = 3, e = 2;
+      char z;
+
 {
 
       void main() int k; int x[];
@@ -7,5 +9,6 @@ program Program
             x = new int[3];
             e = 7;
             i = 0;
+            z = 3;
       }
 }
