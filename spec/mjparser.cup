@@ -169,8 +169,8 @@ ClassVarDecl ::=
 ClassVarList ::=   
                 ClassVar COMMA ClassVarList 
         |       ClassVar 
-        |       error 
-        |       error COMMA ClassVarList ;
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line "+errleft); :}
+        |       error:err LBRACE {: impl.reportInfo("Successful error recovery on line "+errleft); :} ;
 
 
 ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.LOCAL, false); :}
