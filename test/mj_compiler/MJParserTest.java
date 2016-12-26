@@ -26,10 +26,14 @@ public class MJParserTest {
 	public static void main(String[] args) throws Exception {
 		
 		Logger log = Logger.getLogger(MJParserTest.class);
-		
+                String inputTests[] = {"lexical analysis", "syntax analysis", "semantics analysis", "code generator"};
+                String testLevel[] = {"A","B","C"};
+                String testType[] = {"_correct.mj","_wrong.mj"};
+		String inputProgram = "test/"+inputTests[2]+"/"+testLevel[0]+testType[1];
+                
 		Reader br = null;
 		try {
-			File sourceCode = new File("test/program.mj");
+			File sourceCode = new File(inputProgram);
 			log.info("Compiling source file: " + sourceCode.getAbsolutePath());
 			
 			br = new BufferedReader(new FileReader(sourceCode));

@@ -1,143 +1,387 @@
 package utils;
 
+import JFlex.sym;
 import java_cup.runtime.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.*;
 
 import java.lang.*;
+import java.util.EnumMap;
+import java.util.Map;
+import org.apache.log4j.Logger;
+
+
 
 public class ParserActionImplementer {	
-	
-
-	public void report_error(String msg, int line) {
-
-	}
-
-	public void report_info(String msg, int line) {
-
-	}
-
-	public void report_error(String msg) {
-
-	}
-
-	public void report_info(String msg) {
-
-	}
-
-	public void startProgram(String name) {
-
-	}
-
-	public void endProgram() {
-
-	}
-
-	public Struct findType(String typeName, int line) {
-		return null ;
-	}
-
-	public void newConst(String name, int line, Object value) {
-
-	}
-
-	public void newVar(String name, int line, boolean isGlobal) {
-
-	}
-
-	public void newArray(String name, int line, boolean isGlobal) {
-
-	}
-
-	public void funcType (Struct type, String name, int line) {
-
-	}
-
-	public void endFunc() {
-
-	}
-
-	public void funcStart() {
-
-	}
-
-	public void newEqualExpression(Obj designator, Struct expression, int line) {
-
-	}
-
-	public Obj getObj(String ident) {
-		Obj res = null;
-		return res;
-	}
-
-	public void detection(String ident, int line) {
+    public Integer printCallCount = 0;
+    private Boolean mainIsDefined = false;
+    public Map<SymbolOccurence, Integer> mapOfEnumerations = new EnumMap<SymbolOccurence, Integer>(SymbolOccurence.class);
+    public Scope globalScope;
+    
+    public Obj currentProgram;
+    public Scope currentScope;
+    public Struct currentVarType;
+    public Struct currentConstType;
+    
+    public Obj currentMethod;
+    public String currentMethodName;
+    public Struct currentMethodType;
+    public Boolean currentMethodIsStatic;
+    public Boolean currentMethodHasReturn;
+    
+    public String currentClassName;
+    public Struct currentClassParent;
+    public Obj currentClass;
+    
+    public static final int NUMBER = 25;
+    public static final int CHAR = 23;
+    public static final int BOOL = 24;
+    
+    public static final Struct intType = new Struct(NUMBER, Tab.intType);
+    public static final Struct charType = new Struct(CHAR, Tab.charType);
+    public static final Struct boolType = new Struct(BOOL);
+    
+    public Logger log = Logger.getLogger(getClass());
+    
+    public void reportInfo(String msg, int line) {
+        System.out.println(msg + " " + line);
+        log.info(msg.toString());
+    }
+    
+    public void reportInfo(String msg) {
+        System.out.println(msg);
+        log.info(msg.toString());
+    }
+    
+    public void reportError(String message, Object info) {
+      System.err.print(message);
+      System.err.flush();
+      if (info instanceof Symbol)
+            System.err.println("Error! Line " + ((Symbol)info).left);
+      else System.err.println("");
+    }
+    
+    public void reportError(String message) {
+      System.err.println(message);
+      System.err.flush();
+    }
+    
+    public void unrecoveredSyntaxError(Symbol curToken) throws java.lang.Exception {
+        reportFatalError("Error! Parsing has to be stopped.", curToken);
+    }
+    
+    public void reportFatalError(String message, Object info) throws java.lang.Exception {
+      reportError(message, info);
+    }
+    
+    
+    
+    public void startProgram(String progName) {
+        reportInfo("Program named \""+progName+"\" STARTED.");
+        Tab.insert(Obj.Type, "int", intType);
+        Tab.insert(Obj.Type, "char", charType);
+        Tab.insert(Obj.Type, "bool", boolType);
+        
+        
+        globalScope = Tab.currentScope();
+        currentProgram = Tab.insert(Obj.Prog, progName, Tab.noType);
+        Tab.openScope();
+        currentScope = Tab.currentScope();
+    }
+    
+    public void endProgram() {
+        if(!mainIsDefined) {
+            String tmp = "Error! Main function has not been found."; 
+            reportError(tmp);
+            log.info(tmp);
+        }
+        presentSymbolOccurences();
+//        Tab.chainLocalSymbols(currentProgram);
+        Tab.closeScope();
+    }
+    
+    public void presentSymbolOccurences() {
+        System.out.println("\n\n//-------- Presenting number of occurences for each item --------\\\\");
+        for (Map.Entry<SymbolOccurence, Integer> entry : mapOfEnumerations.entrySet())
+        {
+            System.out.println(entry.getKey() + " : " + entry.getValue());
+        }
+        System.out.println("//---------------------------------------------------------------\\\\\n\n");
+    }
+    
+    
+    
+    public void increment(SymbolOccurence item) {
+        mapOfEnumerations.putIfAbsent(item, 0);
+        int tmp = mapOfEnumerations.get(item);
+        mapOfEnumerations.put(item, tmp+1);
+    }
+    
+    
+    
+    public Struct resolveType(String typeName, int line) {
+        Struct res = null;
+        Obj obj = Tab.find(typeName);
+        if((obj == Tab.noObj) || (obj.getKind() != Obj.Type)) 
+            reportError("Error! Undefined type \"" + typeName + "\" on line ", line);
+        res = obj.getType();
+        return res;
+    }
+    
+    public Obj resolveIdentificator(String ident, int line) {
+        Obj res = null;
+        Obj temp = Tab.find(ident);
+        if(temp.equals(Tab.noObj)) {
+            res = Tab.noObj;
+            reportError("Error! undefined identificator named \""+ident+"\" on line ", line);
+        } else {
+            if (temp.getKind() == Obj.Con) 						
+                reportInfo("Constant named \"" + ident + "\" has been detected on line ", line);
+            else if (temp.getKind() == Obj.Var) 
+                if (temp.getLevel() == 0) 
+                    reportInfo("Global variable named \"" + ident + "\" has been detected on line ", line);
+                else 
+                    reportInfo("Local variable named \"" + ident + "\" has been detected on line ", line);
+        }
+        return res;
+    }
+    
+    public Struct compareTypes(Struct item1, Struct item2, int line) {
+        Struct res = null;
+        if(item1.assignableTo(item2))
+            res = item1;
+        else
+            reportError("Error! Types are incompatible on line "+line);
+        return res;
+    }
+    
+    
+    
+    public void addConst(String constName, Object constValue, int line) {
+        if(Tab.currentScope().findSymbol(constName) != null) {
+            reportError("Error! Constant named \"" + constName + "\" has already been declared. Line " , line);
+        } else {
+            int address = 0;
+            int constKind = currentConstType.getKind();
             
-	}
-
-	public void newArray(String ident, int line) {
-
-	}
-
-	public void checkInt(Struct type, int line) {
-
-	}
-
-	public Struct checkMinus(Struct term, int line) {
-		Struct res = null;
-		return res;
-	}
-
-	public Struct addOp(Struct first, Struct second, Integer operation, int line) {
-		Struct res = null;
-		return res;
-	}
-
-	public Struct mulOp(Struct first, Struct second, Integer operation, int line) {
-		Struct res = null;
-		return res;
-	}
-
-	public Struct newDesFactor (Obj designator) {
-		Struct res = null;
-		return res;
-	}
-
-	public Struct newFuncFactor(Obj designator, int line, int v) {
-		Struct res = null;
-		return res;
-	}
-
-	public Struct newExprFactor(Struct expr) {
-		Struct res = null;
-		return res;
-	}
-
-	public Struct newArrFactor(Struct first, Struct second, int line) {
-		Struct res = null;
-		return res;
-	}
-
-	public void increment (Obj designator, int line) {
-
-	}
-
-	public void decrement (Obj designator, int line) {
-
-	}
-
-	public void returnMatched(Struct type, int line) {
-
-	}
-
-	public void readMatched(Obj designator, int line) {
-
-	}
-
-	public void printMatched (Struct type, Integer length, int line) {
-
-	}
-
-	public void newFunction(Obj designator, int line) {
-
-	}
+            if(((constKind==1)&&(!((constValue instanceof Integer)||(constValue instanceof Boolean))))||((constKind==2)&&(!(constValue instanceof Character)))) {
+                reportError("Error! Constant named \"" + constName + "\" has different type and value. Line " , line);
+            } else {
+                if(constValue instanceof Integer) {
+                    address = (Integer) constValue;
+                } else if (constValue instanceof Character) {
+                    address = (Character) constValue;
+                } else if (constValue instanceof Boolean) {
+                    address = ((Boolean)constValue) == null ? 0 : 1;
+                }
+                Tab.insert(Obj.Con, constName, currentConstType).setAdr(address);
+                increment(SymbolOccurence.GLOBAL_CONST_DEFINITIONS);
+            }
+        }
+    }
+    
+    public void addVar(String varName, int line, SymbolOrigin origin, Boolean isArray) {
+        if(Tab.currentScope().findSymbol(varName) != null)
+                reportError("Error! Variable \"" + varName + "\" has already been declared. Line " , line);
+        else {
+            switch(origin) {
+                case GLOBAL:
+                    if(isArray) {
+                        increment(SymbolOccurence.GLOBAL_ARRAY_DEFINITIONS);
+                    } else {
+                        increment(SymbolOccurence.GLOBAL_VAR_DEFINITIONS);
+                    }
+                    break;
+                case LOCAL:
+                    if((currentMethod!= null)&&("main".equals(currentMethod.getName()))) {
+                        increment(SymbolOccurence.MAIN_VAR_DEFINITIONS);
+                    }
+                    break;
+                case UNIMPORTANT:
+                    break;
+                default:
+                    reportError("Error! Origin of variable \"" + varName + "\" is undefined. Line " , line);
+                    return;
+            }
+            Obj temp;
+            if(isArray) {
+                temp = Tab.insert(Obj.Var, varName, new Struct (Struct.Array, currentVarType));
+            } else {
+                temp = Tab.insert(Obj.Var, varName, currentVarType);   
+            }
+        }
+    }
+    
+    public void addMethod(String methodName, Struct methodType, int line) {
+        currentMethodName = methodName;
+        currentMethodType = methodType;
+        
+        if(Tab.currentScope().findSymbol(methodName) != null)
+            reportError("Error! Method \"" + methodName + "\" has already been declared. Line " , line);
+        else {
+            if("main".equals(methodName)) {
+                mainIsDefined = true;
+            }
+            
+            if(currentMethodType == null)
+                currentMethodType = Tab.noType;
+            
+            currentMethod = Tab.insert(Obj.Meth, currentMethodName, currentMethodType);
+            Tab.openScope();
+        }
+    }
+    
+    
+    
+    public void markReturn() {
+        if(currentMethod!=null) {
+            currentMethodHasReturn = true;
+        }
+    }
+    
+    
+    
+    public void classStart(String className, int line) {
+        currentClassName = className;
+        if(Tab.currentScope().findSymbol(currentClassName) != null)
+            reportError("Error! Class \"" + currentClassName + "\" has already been declared. Line " , line);
+        else {
+            Struct type = new Struct(Struct.Class);
+            currentClass = Tab.insert(Obj.Type, currentClassName, type);
+            Tab.openScope(); 
+        }
+    }
+    
+    public void classEnd() {
+        Tab.chainLocalSymbols(currentClass);
+        Tab.closeScope();
+        currentClass = null;
+    }
+    
+    
+    
+    public void methodStart() {
+        currentMethodHasReturn = false;
+    }
+    
+    public void methodEnd() {
+        if((currentMethod.getType() != Tab.noType) && (currentMethodHasReturn == false))
+            reportError("Error! Non void method has no return.");
+        currentMethod = null;
+        currentMethodHasReturn = false;
+        Tab.closeScope();
+    }
+    
+    
+    
+    public void designatorCheckType(String des) {
+    
+    }
+    
+    public Struct factorNewDesignator(Obj designator, int line) {
+        Struct res = null;
+        if(designator == Tab.noObj) {
+            res = Tab.noType;
+        } else {
+            res = designator.getType();
+        }
+        return res;
+    }
+    
+    public Struct factorNewMethod(Obj designator, int line) {
+        Struct res = null;
+        if(Obj.Meth != designator.getKind()) {
+            reportError("Error! Method "+designator.getName()+" is undefined or the designator is not a method at all. Line ", line);
+            res = Tab.noType;
+        } else {
+            Obj temp = Tab.find(designator.getName());
+            if(temp == null) {
+                reportError("Error! Method is undefined on line ", line);
+            } else if (temp.getType() == Tab.noType) {
+                reportError("Error! Method is type of void and used as Rvalue on line ", line);
+            } else {
+                //TODO: generate valid designator code expression 
+            }
+            res = (temp != null)?temp.getType():Tab.noType;
+        }
+        return res;
+    }
+    
+    public Struct factorNewNumber(Integer number) {
+        Struct res = null;
+        Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
+        temp.setAdr(number.intValue());
+        res = temp.getType();
+        return res;
+    }
+    
+    public Struct factorNewChar(Character ch) {
+        Struct res = null;
+        Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
+        temp.setAdr(ch.charValue());
+        res = temp.getType();
+        return res;
+    }
+    
+    public Struct factorNewBool(Boolean b) {
+        Struct res = null;
+        Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
+        temp.setAdr((b.booleanValue()==true)?1:0);
+        res = temp.getType();
+        return res;
+    }
+    
+    public Struct factorNewExpr(Struct expr, int line) {
+        Struct res = null;
+        res = expr;
+        return res;
+    }
+    
+    public Struct factorNewArray(Struct type, Struct expr, int line) {
+        Struct res = null;
+        if(!Tab.intType.equals(expr)) {
+            reportError("Error! Expression must be of type Integer on line ", line);
+        } else {
+            res = new Struct(Struct.Array, type);
+        }
+        return res;
+    }
+    
+    public Struct factorNewClass(Struct type, int line) {
+        Struct res = null;
+        Struct temp = new Struct(Struct.Class);
+        if(!type.assignableTo(temp)) {
+            reportError("Error! Element must be of type Class on line ", line);
+            res = Tab.noType;
+        } else 
+            res = type;
+        return res;
+    }
+    
+    
+    //LEVEL 2
+    public void onGlobalMethodCalled() {
+    
+    }
+    
+    public void onArrayItemCalled() {
+    
+    }
+    
+    public void onMethodFormalArgumentCalled() {
+    
+    }
+    
+    //LEVEL 3
+    public void onInnerClassObjectCreated() {
+    
+    }
+    
+    public void onInnerclassFieldCalled() {
+    
+    }
+    
+    public void onInnerclassMethodCalled() {
+    
+    }
 }

@@ -4,35 +4,28 @@ import java_cup.runtime.*;
 import org.apache.log4j.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.*;
-import utils.ParserActionImplementer;
+import utils.*;
 
 // import java.io.*;
 
 
 parser code {:	
+    ParserActionImplementer impl = new ParserActionImplementer() ;	
     int printCallCount = 0;
 
     Logger log = Logger.getLogger(getClass());
      
     public void report_fatal_error(String message, Object info) throws java.lang.Exception {
       done_parsing();
-      report_error(message, info);
+      impl.reportError(message, info);
     }
   
     public void syntax_error(Symbol cur_token) {
-        report_error("\nSyntax error : ", cur_token);
+        impl.reportError("\nSyntax error : ", cur_token);
     }
   
     public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
-        report_fatal_error("Error : parsing has to be stopped", cur_token);
-    }
-
-    public void report_error(String message, Object info) {
-      System.err.print(message);
-      System.err.flush();
-      if (info instanceof Symbol)
-                System.err.println("Error : on line " + ((Symbol)info).left);
-      else System.err.println("");
+        impl.reportFatalError("Error : parsing has to be stopped", cur_token);
     }
 :}
 
@@ -54,41 +47,45 @@ scan with {:
     return s;
 :}
 
-terminal PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, VOID, LBRACK, RBRACK, READ, BREAK;
-terminal IF, ELSE;
-terminal CLASS, EXTENDS, CONST;
-terminal Character CHAR;
-terminal Boolean BOOL;
-terminal Integer NUMBER ;
-terminal String IDENT ;
-terminal INC, DEC, FOR, OR, AND, NEQ, GT, GEQ, LT, LEQ, DOT, NEW, EQ;
-terminal ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ;
-terminal ADD, SUB, MUL, DIV, MOD;
+terminal     PROG, STATIC, CONTINUE, LBRACE, RBRACE, SEMI, LPAREN, RPAREN, COMMA, PRINT, RETURN, VOID, LBRACK, RBRACK, READ, BREAK;
+terminal     IF, ELSE;
+terminal     CLASS, EXTENDS, CONST;
+terminal     Character CHAR;
+terminal     Boolean BOOL;
+terminal     Integer NUMBER ;
+terminal     String IDENT ;
+terminal     INC, DEC, FOR, OR, AND, NEQ, GT, GEQ, LT, LEQ, DOT, NEW, EQ;
+terminal     ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMUL, ASSIGNDIV, ASSIGNMOD ;
+terminal     ADD, SUB, MUL, DIV, MOD;
 non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
-non terminal ConstDecl, ConstList, Constant, ConstAdditionalList, ConstType ;
-non terminal VarDecl, VarList, Var ; 
-non terminal ClassDecl, ClassExtended, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
-non terminal MethodDecl, MethodStatic, MethodReturnType, FormPars, MethodVarDecl, FormalParamList, FormalParamDecl;
-non terminal Type ;
+non terminal ConstDecl, ConstList, Constant, ConstType ;
+non terminal GlobalVarDecl, GlobalVarList, GlobalVar ; 
+non terminal ClassDecl, ClassExtended, ClassMethodListOptional, ClassMethodDecl, ClassMethodStatic, ClassMethodReturnType, ClassFormPars, ClassMethodVarDeclList ;
+non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
+non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
+non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, Designator, DesignatorExtension, DesignatorActParsOptional, ActPars ;
+non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
 non terminal PrintExtension ; 
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal Condition, ConditionTerm, ConditionFact ;
 non terminal IfStatement, IfCondition ;
-non terminal Expr, ExprList;
 non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
-non terminal IdentList, IdentDecl ;
-non terminal TermList, Term, FactorList, Factor ;
+
+non terminal Obj Designator, IdentList, IdentDecl ;
+non terminal Struct Type, Expr, ExprList, Term, TermList, Factor, FactorList ;
 
 precedence left ELSE;
 
+
+
 //GLOBAL -----------------------------------------------------------------------
-Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE ;
+//------------------------------------------------------------------------------
+Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE {: impl.endProgram(); :};
 
 
-ProgramName ::= IDENT ;
+ProgramName ::= IDENT:progName {: RESULT = Tab.insert(Obj.Prog, progName.toString(), Tab.noType); impl.startProgram(progName); :} ;
 
 
 GlobalParameterList ::= 
@@ -98,100 +95,169 @@ GlobalParameterList ::=
 
 GlobalParameterType ::=    
                 ConstDecl
-        |       VarDecl 
+        |       GlobalVarDecl 
         |       ClassDecl ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
 
 
 //CONSTANT ---------------------------------------------------------------------
-ConstDecl ::=   CONST Type ConstList SEMI ;
+//------------------------------------------------------------------------------
+ConstDecl ::=   CONST Type:type {: impl.currentConstType = type; :} ConstList SEMI ;
 
 
-ConstList ::=   Constant ConstAdditionalList ;
-
-
-ConstAdditionalList ::= 
-                COMMA Constant ConstAdditionalList 
+ConstList ::=   ConstList Constant
+        |       ConstList COMMA Constant
         |       /* epsilon */;
 
 
-Constant ::=    IDENT ASSIGN ConstType ;
+Constant ::=    IDENT:constName ASSIGN ConstType:constValue {: impl.addConst(constName, constValue, constNameleft); :} ;
 
 
 ConstType ::=   
-                NUMBER 
-        |       CHAR 
-        |       BOOL ;
+                NUMBER:number {: RESULT = number; :}
+        |       CHAR:c {: RESULT = c; :}
+        |       BOOL:bool {: RESULT = bool; :} ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
+
 //VARIABLE ---------------------------------------------------------------------
-VarDecl ::=     Type VarList SEMI ;
+//------------------------------------------------------------------------------
+GlobalVarDecl ::=     
+                Type:varType {: impl.currentVarType = varType; :} GlobalVarList SEMI 
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+GlobalVarList ::=     
+                GlobalVar COMMA GlobalVarList 
+        |       GlobalVar
+        |       error COMMA GlobalVarList:globalVarList {: impl.reportInfo("Successful error recovery. Line ", globalVarListleft); :} 
+        |       error:err {: impl.reportInfo("Successful error recovery. Line", errleft); :} ;
 
 
-VarList ::=     Var COMMA VarList 
-        |       Var 
-        |       error 
-        |       error COMMA VarList ;
+GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, false); :} 
+        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, true); :} ;
 
 
-Var ::=         IDENT 
-        |       IDENT LBRACK RBRACK ;
-
-
-Type ::=        IDENT ;
+Type ::=        IDENT:typeName {: RESULT = impl.resolveType(typeName, typeNameleft); :} ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
 
 //CLASS ------------------------------------------------------------------------
-ClassDecl ::=   CLASS IDENT ClassExtended LBRACE ClassVarDecl ClassMethodList RBRACE ;
+//------------------------------------------------------------------------------
+ClassDecl ::=   CLASS IDENT:className ClassExtended:classExtended {: impl.classStart(className, classExtendedleft); :} LBRACE ClassVarDeclList ClassMethodListOptional RBRACE {: impl.classEnd(); :};
 
 
 ClassExtended ::=   
-                EXTENDS Type 
+                EXTENDS Type:parent {: impl.currentClassParent = parent; :} 
+        |       /* epsilon */ {: impl.currentClassParent = null; :} ;
+
+
+ClassVarDeclList ::=
+                ClassVarDecl ClassVarDeclList
         |       /* epsilon */ ;
 
 				  
 ClassVarDecl ::=    
-                Type ClassVarList SEMI
-        |       /* epsilon */ ;
+                Type:classVarType {: impl.currentVarType = classVarType; :} ClassVarList SEMI ;
 
 
 ClassVarList ::=   
                 ClassVar COMMA ClassVarList 
         |       ClassVar 
-        |       error 
-        |       error COMMA ClassVarList ;
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       error:err LBRACE {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
-ClassVar ::=    IDENT 
-        |       IDENT LBRACK RBRACK ;
+ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.LOCAL, false); :}
+        |       IDENT:classVarName LBRACK RBRACK {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.LOCAL, true); :};
 	
 			 
-ClassMethodList ::= 
-                LBRACE MethodList RBRACE 
+ClassMethodListOptional ::= 
+                LBRACE ClassMethodList RBRACE 
         |       /* epsilon */ ;
-//------------------------------------------------------------------------------
 
 
-//METHOD -----------------------------------------------------------------------
-MethodList ::=  MethodList MethodDecl 
+ClassMethodList ::=  
+                ClassMethodList ClassMethodDecl 
         |       /* epsilon */ ;
 
 					
-MethodDecl ::=  MethodStatic MethodReturnType LPAREN FormPars RPAREN MethodVarDecl LBRACE StatementList RBRACE ;
+ClassMethodDecl ::=  
+                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList {: impl.methodStart(); :} LBRACE ClassStatementList RBRACE {: impl.methodEnd(); :};
 
 
-MethodStatic ::=    
+ClassMethodStatic ::=    
                 STATIC 
         |       /* epsilon */ ;
 
 
+ClassMethodReturnType ::=    
+                Type:type IDENT:methodName {: impl.addMethod(methodName, type, methodNameleft); :}
+        |       VOID IDENT:methodName {: impl.addMethod(methodName, null, methodNameleft); :} ;			 
+
+
+ClassFormPars ::=    
+                ClassFormalParamList
+        |       /* epsilon */ ;
+
+
+ClassFormalParamList ::= 
+                ClassFormalParamDecl COMMA ClassFormalParamList 
+        |       ClassFormalParamDecl ;
+	
+				
+ClassFormalParamDecl ::= 
+                Type:type IDENT:varName {: impl.currentVarType = type; impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, false); :}
+        |       Type:type IDENT:varName LBRACK RBRACK {: impl.currentVarType = type; impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
+
+
+ClassMethodVarDeclList ::=   
+                ClassMethodVarDecl SEMI ClassMethodVarDeclList
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       error:err {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       /* epsilon */ ;
+
+
+ClassMethodVarDecl ::=     
+                Type:type {: impl.currentVarType = type; :} ClassMethodVarList ;
+
+
+ClassMethodVarList ::= 
+                ClassMethodVar COMMA ClassMethodVarList
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       error COMMA ClassMethodVarList:classMethodVarList {: impl.reportInfo("Successful error recovery. Line ", classMethodVarListleft); :} 
+        |       /* epsilon */ ;
+
+
+ClassMethodVar ::=   
+                IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, false); :}   
+        |       IDENT :varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
+
+
+ClassStatementList ::= 
+                StatementList ;
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+
+
+//METHOD -----------------------------------------------------------------------
+//------------------------------------------------------------------------------
+MethodList ::=  MethodList MethodDecl 
+        |       /* epsilon */ ;
+
+
+MethodDecl ::=  MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
+
+
 MethodReturnType ::=    
-                Type IDENT 
-        |       VOID IDENT 
-        |       IDENT; 					 
+                Type:type IDENT:methodName {: impl.addMethod(methodName, type, methodNameleft); :}
+        |       VOID IDENT:methodName {: impl.addMethod(methodName, null, methodNameleft); :} ;			 
 
 
 FormPars ::=    FormalParamList
@@ -204,17 +270,41 @@ FormalParamList ::=
 	
 				
 FormalParamDecl ::= 
-                Type IDENT 
-        |       Type IDENT LBRACK RBRACK ;
+                Type:type IDENT:name {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, false); :}
+        |       Type:type IDENT:name LBRACK RBRACK {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, true); :};
 
 
-MethodVarDecl ::=   
-                VarDecl 
-        |       /* epsilon */ ; 
+MethodVarDeclList ::=   
+                MethodVarDecl SEMI MethodVarDeclList
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       error:err {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       /* epsilon */ ;
+
+
+MethodVarDecl ::=     
+                Type:methodVarType {: impl.currentVarType = methodVarType; :} MethodVarList ;
+
+
+MethodVarList ::= 
+                MethodVar MethodVarListAdditional ;
+                
+
+MethodVarListAdditional ::= 
+                MethodVar COMMA MethodVarListAdditional 
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       error COMMA MethodVarListAdditional:methodVarListAdditional {: impl.reportInfo("Successful error recovery. Line ", methodVarListAdditionalleft); :} 
+        |       /* epsilon */ ;
+
+
+MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, false); :} 
+        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, true); :} ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
+
 //STATEMENT --------------------------------------------------------------------
+//------------------------------------------------------------------------------
 StatementList ::=   
                 StatementList Statement 
         |       /* epsilon */ ;
@@ -238,30 +328,38 @@ StatementUnmatched ::=
                 LBRACE StatementList RBRACE 
         |       IfStatement ;
 //------------------------------------------------------------------------------
-
-
-//DESIGNATOR STATEMENT ---------------------------------------------------------
-DesignatorStatement ::= 
-                Designator:des DesignatorExtension ;
-
-
-Designator ::=  IdentList ;
-
-
-DesignatorExtension ::= 
-                Assignop Expr 
-        |       LPAREN DesignatorActParsOptional RPAREN 
-        |       INC 
-        |       DEC ;
-
-
-DesignatorActParsOptional ::=  
-                ActPars 
-        |       /* epsilon */ ;
 //------------------------------------------------------------------------------
 
 
+
+//DESIGNATOR STATEMENT ---------------------------------------------------------
+//------------------------------------------------------------------------------
+DesignatorStatement ::= 
+                DesignatorAssign
+        |       Designator:des LPAREN ActPars RPAREN {:  :}
+        |       Designator:des LPAREN RPAREN {:  :}
+        |       Designator:des INC:inc {:  :}
+        |       Designator:des DEC:dec {:  :} ;
+
+
+Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
+        |       IdentDecl DOT Designator ;
+
+
+DesignatorAssign ::=
+                Designator:des Assignop:op Expr:expr {: :}
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+
+IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft); :} 
+        |       IDENT:ident LBRACK Expr RBRACK {: RESULT = impl.resolveIdentificator(ident, identleft); :} ;
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+
+
 //PRINT STATEMENT --------------------------------------------------------------
+//------------------------------------------------------------------------------
 PrintStatement ::= 
                 PRINT LPAREN Expr PrintExtension RPAREN ;
 
@@ -270,22 +368,31 @@ PrintExtension ::=
                 COMMA NUMBER 
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
-
-
-//RETURN STATEMENT -------------------------------------------------------------
-ReturnStatement ::= 
-                RETURN 
-        |       RETURN Expr ;
-//------------------------------------------------------------------------------		   
-
-
-//READ STATEMENT ---------------------------------------------------------------
-ReadStatement ::= 
-                READ LPAREN Designator RPAREN ;
 //------------------------------------------------------------------------------
 
 
+
+//RETURN STATEMENT -------------------------------------------------------------
+//------------------------------------------------------------------------------
+ReturnStatement ::= 
+                RETURN {: impl.markReturn(); :}
+        |       RETURN Expr:expr {: impl.markReturn(); :} ;
+//------------------------------------------------------------------------------		   
+//------------------------------------------------------------------------------
+
+
+
+//READ STATEMENT ---------------------------------------------------------------
+//------------------------------------------------------------------------------
+ReadStatement ::= 
+                READ LPAREN Designator RPAREN ;
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+
+
 //FOR STATEMENT ----------------------------------------------------------------
+//------------------------------------------------------------------------------
 ForStatement ::= 
                 FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement ;
 
@@ -299,15 +406,18 @@ ForStatementConditionExtension ::=
                 Condition 
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
 
 
 //IF ELSE STATEMENT ------------------------------------------------------------
+//------------------------------------------------------------------------------
 IfStatement ::=     
                 IfCondition Statement ELSE Statement 
         |       IfCondition Statement;
 
 
-IfCondition ::=     IF LPAREN Condition RPAREN;
+IfCondition ::= IF LPAREN Condition RPAREN;
 
 
 Condition ::=       
@@ -324,53 +434,51 @@ ConditionFact ::=
                 Expr 
         |       Expr Relop Expr ;
 //------------------------------------------------------------------------------
-
-
-
-//IDENT, EXPR ------------------------------------------------------------------
-IdentList ::=   IdentDecl 
-        |       IdentList DOT IdentDecl ;
-
-		   	  
-IdentDecl ::=   IDENT 
-        |       IDENT LBRACK Expr RBRACK ;
-
-
-ExprList ::=    Expr 
-        |       Expr COMMA ExprList ;			  
-
-			  
-Expr ::=        TermList 
-        |       SUB TermList ;
-
-
-ActPars ::=     ExprList;		 
-
-	 
-TermList ::=    Term 
-        |       Term Addop TermList ;		 
-
-
-Term ::=        FactorList ;
-
-
-FactorList ::=  Factor 
-        |       FactorList Mulop Factor ;
-
-
-Factor ::=      NUMBER 
-        |       Designator 
-        |       Designator LPAREN ActPars RPAREN 
-        |       Designator LPAREN RPAREN 
-        |       CHAR 
-        |       BOOL 
-        |       LPAREN Expr RPAREN 
-        |       NEW Type LBRACK Expr RBRACK 
-        |       NEW Type ;
 //------------------------------------------------------------------------------
 
 
+
+//EXPR -------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+ActPars ::=     ExprList:exprList {: RESULT = exprList; :};
+
+
+ExprList ::=    Expr:expr {: RESULT = expr; :}
+        |       Expr COMMA ExprList ;			  
+
+			  
+Expr ::=        TermList:termList {: RESULT = termList; :}
+        |       SUB TermList ;
+		 
+	 
+TermList ::=    Term:term {: RESULT = term; :}
+        |       Term Addop TermList ;		 
+
+
+Term ::=        FactorList:factorList {: RESULT = factorList; :}  ;
+
+
+FactorList ::=  Factor:factor {: RESULT = factor; :} 
+        |       FactorList Mulop Factor ;
+
+
+Factor ::=       
+                Designator:des {: RESULT = impl.factorNewDesignator(des, desleft); :}
+        |       Designator:des LPAREN RPAREN {: RESULT = impl.factorNewMethod(des, desleft); :}
+        |       Designator:des LPAREN ActPars:params RPAREN {: RESULT = impl.factorNewMethod(des, desleft); :}
+        |       NUMBER:num {: RESULT = impl.factorNewNumber(num); :}
+        |       CHAR:c {: RESULT = impl.factorNewChar(c); :}
+        |       BOOL:bool {: RESULT = impl.factorNewBool(bool); :}
+        |       LPAREN Expr:expr RPAREN {: RESULT = impl.factorNewExpr(expr, exprleft); :}
+        |       NEW Type:type LBRACK Expr:expr RBRACK  {: RESULT = impl.factorNewArray(type, expr, typeleft); :}
+        |       NEW Type:type {: :} ; //neterminal mora da oznacava unutrasnju klasu
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+
+
 //OPERATION --------------------------------------------------------------------
+//------------------------------------------------------------------------------
 Relop ::=       EQ 
         |       NEQ 
         |       GT
@@ -405,5 +513,8 @@ MulopLeft ::=   MUL
         |       MOD ;
 
 
-MulopRight ::= ASSIGNMUL | ASSIGNDIV | ASSIGNMOD ;
+MulopRight ::=  ASSIGNMUL 
+        |       ASSIGNDIV 
+        |       ASSIGNMOD ;
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
