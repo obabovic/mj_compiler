@@ -66,7 +66,7 @@ non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, Cla
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorExtension, ActPars ;
+non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
 non terminal PrintExtension ; 
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal Condition, ConditionTerm, ConditionFact ;
@@ -127,14 +127,14 @@ ConstType ::=
 //VARIABLE ---------------------------------------------------------------------
 //------------------------------------------------------------------------------
 GlobalVarDecl ::=     
-                Type:varType {: impl.currentVarType = varType; :} GlobalVarList SEMI ;
-
+                Type:varType {: impl.currentVarType = varType; :} GlobalVarList SEMI 
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 GlobalVarList ::=     
                 GlobalVar COMMA GlobalVarList 
-        |       GlobalVar 
-        |       error {: impl.reportInfo("Successful error recovery."); :}
-        |       error COMMA GlobalVarList {: impl.reportInfo("Successful error recovery."); :} ;
+        |       GlobalVar
+        |       error COMMA GlobalVarList:globalVarList {: impl.reportInfo("Successful error recovery. Line ", globalVarListleft); :} 
+        |       error:err {: impl.reportInfo("Successful error recovery. Line", errleft); :} ;
 
 
 GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, false); :} 
@@ -169,8 +169,8 @@ ClassVarDecl ::=
 ClassVarList ::=   
                 ClassVar COMMA ClassVarList 
         |       ClassVar 
-        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line "+errleft); :}
-        |       error:err LBRACE {: impl.reportInfo("Successful error recovery on line "+errleft); :} ;
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       error:err LBRACE {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
 ClassVar ::=    IDENT:classVarName {: impl.addVar(classVarName, classVarNameleft, SymbolOrigin.LOCAL, false); :}
@@ -218,7 +218,8 @@ ClassFormalParamDecl ::=
 
 ClassMethodVarDeclList ::=   
                 ClassMethodVarDecl SEMI ClassMethodVarDeclList
-        |       ClassMethodVarDecl
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       error:err {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
         |       /* epsilon */ ;
 
 
@@ -227,16 +228,15 @@ ClassMethodVarDecl ::=
 
 
 ClassMethodVarList ::= 
-                ClassMethodVar
-        |       ClassMethodVar COMMA ClassMethodVarList
+                ClassMethodVar COMMA ClassMethodVarList
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       error COMMA ClassMethodVarList:classMethodVarList {: impl.reportInfo("Successful error recovery. Line ", classMethodVarListleft); :} 
         |       /* epsilon */ ;
 
 
 ClassMethodVar ::=   
                 IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, false); :}   
-        |       IDENT :varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} 
-        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line "+errleft); :}
-        |       error:err LBRACE {: impl.reportInfo("Successful error recovery on line "+errleft); :} ;
+        |       IDENT :varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
 
 
 ClassStatementList ::= 
@@ -276,7 +276,8 @@ FormalParamDecl ::=
 
 MethodVarDeclList ::=   
                 MethodVarDecl SEMI MethodVarDeclList
-        |       MethodVarDecl
+        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       error:err {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
         |       /* epsilon */ ;
 
 
@@ -285,19 +286,18 @@ MethodVarDecl ::=
 
 
 MethodVarList ::= 
-                MethodVar MethodVarListAdditional
-        |       /* epsilon */ ;
+                MethodVar MethodVarListAdditional ;
                 
 
 MethodVarListAdditional ::= 
-                COMMA MethodVar MethodVarListAdditional
+                MethodVar COMMA MethodVarListAdditional 
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       error COMMA MethodVarListAdditional:methodVarListAdditional {: impl.reportInfo("Successful error recovery. Line ", methodVarListAdditionalleft); :} 
         |       /* epsilon */ ;
 
 
 MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, false); :} 
-        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, true); :}
-        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line " + errleft); :}
-        |       error:err LBRACE {: impl.reportInfo("Successful error recovery on line " + errleft); :} ;
+        |       IDENT:varName LBRACK RBRACK {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, true); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -335,7 +335,7 @@ StatementUnmatched ::=
 //DESIGNATOR STATEMENT ---------------------------------------------------------
 //------------------------------------------------------------------------------
 DesignatorStatement ::= 
-                Designator:des Assignop:op Expr:expr {: :}
+                DesignatorAssign
         |       Designator:des LPAREN ActPars RPAREN {:  :}
         |       Designator:des LPAREN RPAREN {:  :}
         |       Designator:des INC:inc {:  :}
@@ -345,7 +345,12 @@ DesignatorStatement ::=
 Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
         |       IdentDecl DOT Designator ;
 
-		   	  
+
+DesignatorAssign ::=
+                Designator:des Assignop:op Expr:expr {: :}
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+
 IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft); :} 
         |       IDENT:ident LBRACK Expr RBRACK {: RESULT = impl.resolveIdentificator(ident, identleft); :} ;
 //------------------------------------------------------------------------------
@@ -466,7 +471,7 @@ Factor ::=
         |       BOOL:bool {: RESULT = impl.factorNewBool(bool); :}
         |       LPAREN Expr:expr RPAREN {: RESULT = impl.factorNewExpr(expr, exprleft); :}
         |       NEW Type:type LBRACK Expr:expr RBRACK  {: RESULT = impl.factorNewArray(type, expr, typeleft); :}
-        |       NEW Type:type {: RESULT = impl.factorNewClass(type, typeleft); :} ; //neterminal mora da oznacava unutrasnju klasu
+        |       NEW Type:type {: :} ; //neterminal mora da oznacava unutrasnju klasu
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
