@@ -133,8 +133,15 @@ public class ParserActionImplementer {
         Obj temp = Tab.find(ident);
         if(temp.equals(Tab.noObj)) {
             res = Tab.noObj;
+            reportError("Error! undefined identificator named \""+ident+"\" on line ", line);
         } else {
-            res = temp;
+            if (temp.getKind() == Obj.Con) 						
+                reportInfo("Constant named \"" + ident + "\" has been detected on line ", line);
+            else if (temp.getKind() == Obj.Var) 
+                if (temp.getLevel() == 0) 
+                    reportInfo("Global variable named \"" + ident + "\" has been detected on line ", line);
+                else 
+                    reportInfo("Local variable named \"" + ident + "\" has been detected on line ", line);
         }
         return res;
     }

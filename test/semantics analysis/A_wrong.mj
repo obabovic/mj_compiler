@@ -2,9 +2,10 @@ program Program
       const int pi = 3, e = 2;
 {
 
-      void main() int ; int x[];
+      void main() int k; int x[];
       {     
             x = new int[3];
+            e = 7;
             i = 0;
       }
 }
