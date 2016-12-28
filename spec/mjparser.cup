@@ -466,9 +466,9 @@ Factor ::=
                 Designator:des {: RESULT = impl.factorNewDesignator(des, desleft); :}
         |       Designator:des LPAREN RPAREN {: RESULT = impl.factorNewMethod(des, desleft); :}
         |       Designator:des LPAREN ActPars:params RPAREN {: RESULT = impl.factorNewMethod(des, desleft); :}
-        |       NUMBER:num {: RESULT = impl.factorNewNumber(num); :}
-        |       CHAR:c {: RESULT = impl.factorNewChar(c); :}
-        |       BOOL:bool {: RESULT = impl.factorNewBool(bool); :}
+        |       NUMBER:num {: RESULT = impl.factorNewNumber(num, numleft); :}
+        |       CHAR:c {: RESULT = impl.factorNewChar(c,cleft); :}
+        |       BOOL:bool {: RESULT = impl.factorNewBool(bool,boolleft); :}
         |       LPAREN Expr:expr RPAREN {: RESULT = impl.factorNewExpr(expr, exprleft); :}
         |       NEW Type:type LBRACK Expr:expr RBRACK  {: RESULT = impl.factorNewArray(type, expr, typeleft); :}
         |       NEW Type:type {: :} ; //neterminal mora da oznacava unutrasnju klasu

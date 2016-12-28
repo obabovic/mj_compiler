@@ -76,7 +76,7 @@ public class ParserActionImplementer {
     
     
     
-    public void startProgram(String progName) {
+    public void programStart(String progName) {
         reportInfo("Program named \""+progName+"\" STARTED.");
         Tab.insert(Obj.Type, "int", intType);
         Tab.insert(Obj.Type, "char", charType);
@@ -89,14 +89,14 @@ public class ParserActionImplementer {
         currentScope = Tab.currentScope();
     }
     
-    public void endProgram() {
+    public void programEnd() {
         if(!mainIsDefined) {
             String tmp = "Error! Main function has not been found."; 
             reportError(tmp);
             log.info(tmp);
         }
         presentSymbolOccurences();
-//        Tab.chainLocalSymbols(currentProgram);
+        Tab.chainLocalSymbols(currentProgram);
         Tab.closeScope();
     }
     
@@ -307,27 +307,30 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct factorNewNumber(Integer number) {
+    public Struct factorNewNumber(Integer number, int line) {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr(number.intValue());
         res = temp.getType();
+        reportInfo("Constant of value \"" + number + "\" has been detected on line ", line);
         return res;
     }
     
-    public Struct factorNewChar(Character ch) {
+    public Struct factorNewChar(Character ch, int line) {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
         temp.setAdr(ch.charValue());
         res = temp.getType();
+        reportInfo("Constant of value \"" + ch + "\" has been detected on line ", line);
         return res;
     }
     
-    public Struct factorNewBool(Boolean b) {
+    public Struct factorNewBool(Boolean b, int line) {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr((b.booleanValue()==true)?1:0);
         res = temp.getType();
+        reportInfo("Constant of value \"" + b + "\" has been detected on line ", line);
         return res;
     }
     
