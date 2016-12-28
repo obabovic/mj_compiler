@@ -82,10 +82,10 @@ precedence left ELSE;
 
 //GLOBAL -----------------------------------------------------------------------
 //------------------------------------------------------------------------------
-Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE {: impl.endProgram(); :};
+Program ::=     PROG ProgramName:pName GlobalParameterList LBRACE MethodList RBRACE {: impl.programEnd(); :};
 
 
-ProgramName ::= IDENT:progName {: RESULT = Tab.insert(Obj.Prog, progName.toString(), Tab.noType); impl.startProgram(progName); :} ;
+ProgramName ::= IDENT:progName {: RESULT = Tab.insert(Obj.Prog, progName.toString(), Tab.noType); impl.programStart(progName); :} ;
 
 
 GlobalParameterList ::= 
