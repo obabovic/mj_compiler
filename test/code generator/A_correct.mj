@@ -1,0 +1,9 @@
+program Program 
+      const int pi = 3, e = 2;
+{
+    void main() int i; int x[];
+    {     
+      print(4);
+      print(5);
+    }
+}

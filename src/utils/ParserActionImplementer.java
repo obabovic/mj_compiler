@@ -9,6 +9,7 @@ import java.lang.*;
 import java.util.EnumMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
+import rs.etf.pp1.mj.runtime.Code;
 
 
 
@@ -27,6 +28,7 @@ public class ParserActionImplementer {
     public Obj currentMethod;
     public String currentMethodName;
     public Struct currentMethodType;
+    public int currentMethodNameLine;
     public Boolean currentMethodIsStatic;
     public Boolean currentMethodHasReturn;
     
@@ -178,7 +180,7 @@ public class ParserActionImplementer {
             int address = 0;
             int constKind = currentConstType.getKind();
             
-            if(((constKind==1)&&(!((constValue instanceof Integer)||(constValue instanceof Boolean))))||((constKind==2)&&(!(constValue instanceof Character)))) {
+            if(((constKind==Obj.Con)&&(!((constValue instanceof Integer)||(constValue instanceof Boolean))))||((constKind==2)&&(!(constValue instanceof Character)))) {
                 reportError("Error! Constant named \"" + constName + "\" has different type and value. Line " , line);
             } else {
                 if(constValue instanceof Integer) {
@@ -226,23 +228,48 @@ public class ParserActionImplementer {
         }
     }
     
-    public void addMethod(String methodName, Struct methodType, int line) {
-        currentMethodName = methodName;
-        currentMethodType = methodType;
+    public void addMethod() {
+        String methodName = currentMethodName;
+        Struct methodType = currentMethodType;
+        int line = currentMethodNameLine;
+        
+        currentMethodHasReturn = false;
         
         if(Tab.currentScope().findSymbol(methodName) != null)
             reportError("Error! Method \"" + methodName + "\" has already been declared. Line " , line);
         else {
-            if("main".equals(methodName)) {
-                mainIsDefined = true;
-            }
-            
             if(currentMethodType == null)
                 currentMethodType = Tab.noType;
             
             currentMethod = Tab.insert(Obj.Meth, currentMethodName, currentMethodType);
             Tab.openScope();
         }
+    }
+    
+    public void methodStart() {
+        currentMethod.setAdr(Code.pc);
+        if("main".equals(currentMethodName)) {
+            mainIsDefined = true;
+            Code.mainPc = currentMethod.getAdr();
+        }
+        Code.put(Code.enter);
+        Code.put(currentMethod.getLevel());
+        Code.put(Tab.currentScope().getnVars());
+    }
+    
+    public void methodEnd() {
+        if((currentMethod.getType() != Tab.noType) && (currentMethodHasReturn == false))
+            reportError("Error! Non void method has no return.");
+        
+        Code.put(Code.exit);
+        Code.put(Code.return_);
+        
+        Tab.chainLocalSymbols(currentMethod);
+        Tab.closeScope();
+        
+        currentMethod = null;
+        currentMethodHasReturn = false;
+        
     }
     
     public void markReturn() {
@@ -276,19 +303,6 @@ public class ParserActionImplementer {
         isInForLoop = false;
     }
     
-    public void methodStart() {
-        currentMethodHasReturn = false;
-    }
-    
-    public void methodEnd() {
-        if((currentMethod.getType() != Tab.noType) && (currentMethodHasReturn == false))
-            reportError("Error! Non void method has no return.");
-        Tab.chainLocalSymbols(currentMethod);
-        currentMethod = null;
-        currentMethodHasReturn = false;
-        Tab.closeScope();
-    }
-    
     public void statementCheckIfOutcome() {
 //      TODO: implement code generation for if-else     
     }
@@ -313,7 +327,13 @@ public class ParserActionImplementer {
         if((expr != Tab.charType) && (expr != Tab.intType)&&(expr.getKind() != Struct.Bool))
                 reportError("Error! Expression is not of type int, char or bool on line ", line);
         else {
-        // TODO: code generation for print statement    
+            if(expr == Tab.intType) {
+                Code.loadConst(5);
+                Code.put(Code.print);
+            } else if (expr == Tab.charType) {
+                Code.loadConst(1);
+                Code.put(Code.bprint);
+            }
         }
     }
     
@@ -396,8 +416,12 @@ public class ParserActionImplementer {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr(number.intValue());
-        res = temp.getType();
+        
         reportInfo("Constant of value \"" + number + "\" has been detected on line ", line);
+        
+        Code.load(temp);
+        
+        res = temp.getType();
         return res;
     }
     
@@ -405,17 +429,26 @@ public class ParserActionImplementer {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
         temp.setAdr(ch.charValue());
-        res = temp.getType();
+        
         reportInfo("Constant of value \"" + ch + "\" has been detected on line ", line);
+        
+        Code.load(temp);
+        
+        res = temp.getType();
         return res;
     }
     
     public Struct factorNewBool(Boolean b, int line) {
         Struct res = null;
-        Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
+        Obj boolObj = Tab.find("bool");
+        Obj temp = Tab.insert(Obj.Con, "", boolObj.getType());
         temp.setAdr((b.booleanValue()==true)?1:0);
-        res = temp.getType();
+        
         reportInfo("Constant of value \"" + b + "\" has been detected on line ", line);
+        
+        Code.load(temp);
+        
+        res = temp.getType();
         return res;
     }
     

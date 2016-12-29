@@ -67,12 +67,12 @@ non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, Cla
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, DesignatorIndexer, ActPars ;
+non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
 
-non terminal Obj Designator, IdentDecl ;
+non terminal Obj Designator;
 non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm, Term, TermList, Factor ;
 
 precedence left ELSE;
@@ -187,7 +187,7 @@ ClassMethodList ::=
 
 					
 ClassMethodDecl ::=  
-                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList {: impl.methodStart(); :} LBRACE ClassStatementList RBRACE {: impl.methodEnd(); :};
+                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList LBRACE {: impl.addMethod(); :} ClassStatementList RBRACE {: impl.methodEnd(); :};
 
 
 ClassMethodStatic ::=    
@@ -196,8 +196,8 @@ ClassMethodStatic ::=
 
 
 ClassMethodReturnType ::=    
-                Type:type IDENT:methodName {: impl.addMethod(methodName, type, methodNameleft); :}
-        |       VOID IDENT:methodName {: impl.addMethod(methodName, null, methodNameleft); :} ;			 
+                Type:type IDENT:methodName {: impl.currentMethodName=methodName; impl.currentMethodType = type; impl.currentMethodNameLine=methodNameleft;  :}
+        |       VOID IDENT:methodName {: impl.currentMethodName=methodName; impl.currentMethodType = null; impl.currentMethodNameLine=methodNameleft;  :} ;
 
 
 ClassFormPars ::=    
@@ -251,12 +251,12 @@ MethodList ::=  MethodList MethodDecl
         |       /* epsilon */ ;
 
 
-MethodDecl ::=  MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList {: impl.methodStart(); :} LBRACE StatementList RBRACE {: impl.methodEnd(); :};
+MethodDecl ::=  MethodReturnType:methodReturnType LPAREN FormPars RPAREN MethodVarDeclList LBRACE {: impl.methodStart(); :} StatementList RBRACE {: impl.methodEnd(); :};
 
 
 MethodReturnType ::=    
-                Type:type IDENT:methodName {: impl.addMethod(methodName, type, methodNameleft); :}
-        |       VOID IDENT:methodName {: impl.addMethod(methodName, null, methodNameleft); :} ;			 
+                Type:type IDENT:methodName {: impl.currentMethodName=methodName; impl.currentMethodType = type; impl.currentMethodNameLine=methodNameleft; impl.addMethod(); :}
+        |       VOID IDENT:methodName {: impl.currentMethodName=methodName; impl.currentMethodType = null; impl.currentMethodNameLine=methodNameleft;  impl.addMethod(); :} ;
 
 
 FormPars ::=    FormalParamList
@@ -342,7 +342,7 @@ DesignatorStatement ::=
 
 
 Designator ::=  
-                IDENT DesignatorExtension ;
+                IDENT:ident DesignatorExtension {: RESULT = impl.resolveIdentificator(ident, identleft, false); :} ;
 
 
 DesignatorExtension ::= 
@@ -358,10 +358,6 @@ DesignatorAssign ::=
 
 ActPars ::=     Expr:expr {: RESULT = expr; :}
         |       Expr COMMA ActPars ;
-
-
-IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft, false); :} 
-        |       IDENT:ident LBRACK Expr RBRACK {: RESULT = impl.resolveIdentificator(ident, identleft, true); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
