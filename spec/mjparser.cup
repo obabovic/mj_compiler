@@ -12,6 +12,7 @@ import utils.*;
 parser code {:	
     ParserActionImplementer impl = new ParserActionImplementer() ;	
     int printCallCount = 0;
+    boolean errorDetected = false;
 
     Logger log = Logger.getLogger(getClass());
      
@@ -66,7 +67,7 @@ non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, Cla
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorAssign, ActPars ;
+non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, DesignatorIndexer, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
@@ -319,12 +320,12 @@ StatementMatched ::=
         |       ReturnStatement SEMI 
         |       ReadStatement:readStatement SEMI 
         |       CONTINUE:cont SEMI {: impl.statementCheckContinue(contleft); :}
-        |       BREAK:brk SEMI {: impl.statementCheckBreak(brkleft); :};
+        |       BREAK:brk SEMI {: impl.statementCheckBreak(brkleft); :}
+        |       LBRACE StatementList RBRACE ;
 
 
 StatementUnmatched ::=  
-                LBRACE StatementList RBRACE 
-        |       IfStatement ;
+                IfStatement ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -340,8 +341,14 @@ DesignatorStatement ::=
         |       Designator:des DEC:dec {: RESULT = impl.designatorCheckType(des, DesignatorAllowedType.FOR_DEC, desleft); :} ;
 
 
-Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
-        |       IdentDecl DOT Designator ;
+Designator ::=  
+                IDENT DesignatorExtension ;
+
+
+DesignatorExtension ::= 
+                DesignatorExtension DOT IDENT
+        |       DesignatorExtension LBRACK Expr RBRACK 
+        |       /* epsilon */ ;
 
 
 DesignatorAssign ::=
@@ -411,7 +418,7 @@ ForStatementConditionExtension ::=
 //IF ELSE STATEMENT ------------------------------------------------------------
 //------------------------------------------------------------------------------
 IfStatement ::=     
-                IfCondition:ifCondition Statement:ifStatement ELSE Statement:elseStatement 
+                IfCondition:ifCondition StatementMatched:ifStatement ELSE StatementUnmatched:elseStatement 
         |       IfCondition:ifCondition Statement:ifStatement ;
 
 
