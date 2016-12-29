@@ -361,8 +361,8 @@ IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identle
 //PRINT STATEMENT --------------------------------------------------------------
 //------------------------------------------------------------------------------
 PrintStatement ::= 
-                PRINT LPAREN Expr RPAREN {:  :};
-        |       PRINT LPAREN Expr COMMA NUMBER RPAREN {:  :};
+                PRINT LPAREN Expr:expr RPAREN {: impl.statementCheckPrint(expr, 1, exprleft); :}
+        |       PRINT LPAREN Expr:expr COMMA NUMBER:num RPAREN {: impl.statementCheckPrint(expr, num, exprleft); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 

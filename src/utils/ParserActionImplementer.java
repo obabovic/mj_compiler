@@ -277,6 +277,14 @@ public class ParserActionImplementer {
         Tab.closeScope();
     }
     
+    public void statementCheckPrint(Struct expr, Integer number, int line) {
+        if((expr != Tab.charType) && (expr != Tab.intType)&&(expr.getKind() != Struct.Bool))
+                reportError("Error! Expression is not of type int, char or bool on line ", line);
+        else {
+        // TODO: code generation for print statement    
+        }
+    }
+    
     public void statementCheckRead(Obj designator, int line) {
         if(designator == Tab.noObj) {
                reportError("Error! Designator is no object type on line ", line);
