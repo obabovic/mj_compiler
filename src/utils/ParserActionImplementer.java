@@ -20,6 +20,7 @@ public class ParserActionImplementer {
     
     public Obj currentProgram;
     public Scope currentScope;
+    public boolean isInForLoop;
     public Struct currentVarType;
     public Struct currentConstType;
     
@@ -32,14 +33,16 @@ public class ParserActionImplementer {
     public String currentClassName;
     public Struct currentClassParent;
     public Obj currentClass;
+    public boolean currentIfStatementConditionState;
     
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
     public static final int BOOL = 24;
     
-    public static final Struct intType = new Struct(NUMBER, Tab.intType);
-    public static final Struct charType = new Struct(CHAR, Tab.charType);
-    public static final Struct boolType = new Struct(BOOL);
+    
+    public static final Struct boolType = new Struct(Struct.Bool);
+    public static final Struct stringType = new Struct(Struct.Array, Tab.charType);
+    public static final Struct intArrayType = new Struct(Struct.Array, Tab.intType);
     
     public Logger log = Logger.getLogger(getClass());
     
@@ -76,11 +79,12 @@ public class ParserActionImplementer {
     
     
     
-    public void startProgram(String progName) {
+    public void programStart(String progName) {
         reportInfo("Program named \""+progName+"\" STARTED.");
-        Tab.insert(Obj.Type, "int", intType);
-        Tab.insert(Obj.Type, "char", charType);
-        Tab.insert(Obj.Type, "bool", boolType);
+        Tab.init();
+        Tab.currentScope().addToLocals(new Obj(Obj.Type, "bool", boolType));
+        Tab.currentScope().addToLocals(new Obj(Obj.Type, "string", stringType));
+        Tab.currentScope().addToLocals(new Obj(Obj.Type, "intArray", intArrayType));
         
         
         globalScope = Tab.currentScope();
@@ -89,14 +93,14 @@ public class ParserActionImplementer {
         currentScope = Tab.currentScope();
     }
     
-    public void endProgram() {
+    public void programEnd() {
         if(!mainIsDefined) {
             String tmp = "Error! Main function has not been found."; 
             reportError(tmp);
             log.info(tmp);
         }
         presentSymbolOccurences();
-//        Tab.chainLocalSymbols(currentProgram);
+        Tab.chainLocalSymbols(currentProgram);
         Tab.closeScope();
     }
     
@@ -109,15 +113,11 @@ public class ParserActionImplementer {
         System.out.println("//---------------------------------------------------------------\\\\\n\n");
     }
     
-    
-    
     public void increment(SymbolOccurence item) {
         mapOfEnumerations.putIfAbsent(item, 0);
         int tmp = mapOfEnumerations.get(item);
         mapOfEnumerations.put(item, tmp+1);
     }
-    
-    
     
     public Struct resolveType(String typeName, int line) {
         Struct res = null;
@@ -128,13 +128,38 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Obj resolveIdentificator(String ident, int line) {
+    public Struct compareTypes(Struct type1, Struct type2, int line) {
+        Struct res = null;
+        
+        if(type1.getKind() == Obj.Con)
+            reportError("Error! Left part of equation is a constant on line "+line);
+        else if(type1.assignableTo(type2)) {
+            res = type1;
+        }
+        else
+            reportError("Error! Types are incompatible on line "+line);
+        
+        return res;
+    }
+    
+    public Struct checkIfInt(Struct type, int line) {
+        Struct res = Tab.noType;
+        if(type != Tab.intType) {
+            reportError("Error! Type is not int. Line ", line);
+        } else {
+            res = type;
+        }
+        return res;
+    }
+    
+    public Obj resolveIdentificator(String ident, int line, boolean isArray) {
         Obj res = null;
         Obj temp = Tab.find(ident);
         if(temp.equals(Tab.noObj)) {
             res = Tab.noObj;
             reportError("Error! undefined identificator named \""+ident+"\" on line ", line);
         } else {
+            res = temp;
             if (temp.getKind() == Obj.Con) 						
                 reportInfo("Constant named \"" + ident + "\" has been detected on line ", line);
             else if (temp.getKind() == Obj.Var) 
@@ -145,17 +170,6 @@ public class ParserActionImplementer {
         }
         return res;
     }
-    
-    public Struct compareTypes(Struct item1, Struct item2, int line) {
-        Struct res = null;
-        if(item1.assignableTo(item2))
-            res = item1;
-        else
-            reportError("Error! Types are incompatible on line "+line);
-        return res;
-    }
-    
-    
     
     public void addConst(String constName, Object constValue, int line) {
         if(Tab.currentScope().findSymbol(constName) != null) {
@@ -231,15 +245,11 @@ public class ParserActionImplementer {
         }
     }
     
-    
-    
     public void markReturn() {
         if(currentMethod!=null) {
             currentMethodHasReturn = true;
         }
     }
-    
-    
     
     public void classStart(String className, int line) {
         currentClassName = className;
@@ -258,7 +268,13 @@ public class ParserActionImplementer {
         currentClass = null;
     }
     
+    public void forLoopStart() {
+        isInForLoop = true;
+    }
     
+    public void forLoopEnd() {
+        isInForLoop = false;
+    }
     
     public void methodStart() {
         currentMethodHasReturn = false;
@@ -267,15 +283,84 @@ public class ParserActionImplementer {
     public void methodEnd() {
         if((currentMethod.getType() != Tab.noType) && (currentMethodHasReturn == false))
             reportError("Error! Non void method has no return.");
+        Tab.chainLocalSymbols(currentMethod);
         currentMethod = null;
         currentMethodHasReturn = false;
         Tab.closeScope();
     }
     
+    public void statementCheckIfOutcome() {
+//      TODO: implement code generation for if-else     
+    }
+    
+    public void statementCheckIfCondition(Struct condition, int line) {
+        if(condition.getKind() != Struct.Bool) {
+            reportError("Error! Condition is not of kind bool. Line ", line);
+        } else {
+            
+        }
+    }
+    
+    public void statementCheckForCondition(Struct condition, int line) {
+        if(condition.getKind() != Struct.Bool) {
+            reportError("Error! Condition is not of kind bool. Line ", line);
+        } else {
+            
+        }
+    }
+    
+    public void statementCheckPrint(Struct expr, Integer number, int line) {
+        if((expr != Tab.charType) && (expr != Tab.intType)&&(expr.getKind() != Struct.Bool))
+                reportError("Error! Expression is not of type int, char or bool on line ", line);
+        else {
+        // TODO: code generation for print statement    
+        }
+    }
+    
+    public void statementCheckRead(Obj designator, int line) {
+        if(designator == Tab.noObj) {
+               reportError("Error! Designator is no object type on line ", line);
+        } else {
+            int tmp = designator.getKind();
+            if((tmp != Obj.Var)&&(tmp != Obj.Fld)&&(tmp != Obj.Elem)) {
+                reportError("Error! Designator is not of kind var, array element or class field on line ", line);
+            } else if((designator.getType() != Tab.intType)&&(designator.getType() != Tab.charType)&&(designator.getType().getKind() != Struct.Bool)) {
+                reportError("Error! Designator is not of type int, char or bool on line ", line);
+            }
+       }
+    }
+    
+    public void statementCheckContinue(int line) {
+        if(!isInForLoop) {
+            reportError("Error! Break statement is not in for loop on line ", line);
+        }
+    }
+    
+    public void statementCheckBreak(int line) {
+        if(!isInForLoop) {
+            reportError("Error! Break statement is not in for loop on line ", line);
+        }
+    }
     
     
-    public void designatorCheckType(String des) {
-    
+    public Obj designatorCheckType(Obj des, DesignatorAllowedType type, int line) {
+        Obj res = null;
+        if(des == Tab.noObj) {
+            reportError("Error! Designator is no object type on line ", line);
+        } else {
+            switch(type) {
+            case FOR_INC:
+            case FOR_DEC:
+                int tmp = des.getKind();
+                if((tmp != Obj.Var)&&(tmp != Obj.Fld)&&(tmp != Obj.Elem)) {
+                    reportError("Error! Designator is not of kind var or class field on line ", line);
+                } else if(des.getType() != Tab.intType) {
+                    reportError("Error! Designator is not of type int on line ", line);
+                }
+                break;
+            }
+        }
+        return res;
     }
     
     public Struct factorNewDesignator(Obj designator, int line) {
@@ -307,27 +392,30 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct factorNewNumber(Integer number) {
+    public Struct factorNewNumber(Integer number, int line) {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr(number.intValue());
         res = temp.getType();
+        reportInfo("Constant of value \"" + number + "\" has been detected on line ", line);
         return res;
     }
     
-    public Struct factorNewChar(Character ch) {
+    public Struct factorNewChar(Character ch, int line) {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
         temp.setAdr(ch.charValue());
         res = temp.getType();
+        reportInfo("Constant of value \"" + ch + "\" has been detected on line ", line);
         return res;
     }
     
-    public Struct factorNewBool(Boolean b) {
+    public Struct factorNewBool(Boolean b, int line) {
         Struct res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr((b.booleanValue()==true)?1:0);
         res = temp.getType();
+        reportInfo("Constant of value \"" + b + "\" has been detected on line ", line);
         return res;
     }
     
