@@ -107,9 +107,9 @@ GlobalParameterType ::=
 ConstDecl ::=   CONST Type:type {: impl.currentConstType = type; :} ConstList SEMI ;
 
 
-ConstList ::=   ConstList Constant
-        |       ConstList COMMA Constant
-        |       /* epsilon */;
+ConstList ::=   Constant
+        |       ConstList COMMA Constant 
+        |       error:err {: impl.reportError("Successful error recovery on line ", errleft); :} ;
 
 
 Constant ::=    IDENT:constName ASSIGN ConstType:constValue {: impl.addConst(constName, constValue, constNameleft); :} ;
@@ -319,9 +319,9 @@ StatementMatched ::=
         |       DesignatorStatement SEMI    
         |       PrintStatement SEMI 
         |       ReturnStatement SEMI 
-        |       ReadStatement SEMI 
-        |       CONTINUE SEMI 
-        |       BREAK SEMI ;
+        |       ReadStatement:readStatement SEMI 
+        |       CONTINUE:cont SEMI {: impl.statementCheckContinue(contleft); :}
+        |       BREAK:brk SEMI {: impl.statementCheckBreak(brkleft); :};
 
 
 StatementUnmatched ::=  
@@ -336,10 +336,10 @@ StatementUnmatched ::=
 //------------------------------------------------------------------------------
 DesignatorStatement ::= 
                 DesignatorAssign
-        |       Designator:des LPAREN ActPars RPAREN {:  :}
         |       Designator:des LPAREN RPAREN {:  :}
-        |       Designator:des INC:inc {:  :}
-        |       Designator:des DEC:dec {:  :} ;
+        |       Designator:des LPAREN ActPars RPAREN {:  :}
+        |       Designator:des INC:inc {: RESULT = impl.designatorCheckType(des, DesignatorAllowedType.FOR_INC, desleft); :}
+        |       Designator:des DEC:dec {: RESULT = impl.designatorCheckType(des, DesignatorAllowedType.FOR_DEC, desleft); :} ;
 
 
 Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
@@ -347,12 +347,12 @@ Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
 
 
 DesignatorAssign ::=
-                Designator:des Assignop:op Expr:expr {: :}
+                Designator:des Assignop:op Expr:expr {: RESULT = impl.compareTypes(des, expr, desleft); :}
         |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
-IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft); :} 
-        |       IDENT:ident LBRACK Expr RBRACK {: RESULT = impl.resolveIdentificator(ident, identleft); :} ;
+IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft, false); :} 
+        |       IDENT:ident LBRACK Expr RBRACK {: RESULT = impl.resolveIdentificator(ident, identleft, true); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -361,12 +361,8 @@ IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identle
 //PRINT STATEMENT --------------------------------------------------------------
 //------------------------------------------------------------------------------
 PrintStatement ::= 
-                PRINT LPAREN Expr PrintExtension RPAREN ;
-
-
-PrintExtension ::=  
-                COMMA NUMBER 
-        |       /* epsilon */ ;
+                PRINT LPAREN Expr RPAREN {:  :};
+        |       PRINT LPAREN Expr COMMA NUMBER RPAREN {:  :};
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -385,7 +381,7 @@ ReturnStatement ::=
 //READ STATEMENT ---------------------------------------------------------------
 //------------------------------------------------------------------------------
 ReadStatement ::= 
-                READ LPAREN Designator RPAREN ;
+                READ LPAREN Designator:des RPAREN {: impl.statementCheckRead(des, desleft); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -394,7 +390,7 @@ ReadStatement ::=
 //FOR STATEMENT ----------------------------------------------------------------
 //------------------------------------------------------------------------------
 ForStatement ::= 
-                FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN Statement ;
+                FOR LPAREN ForStatementDesignatorExtension SEMI ForStatementConditionExtension SEMI ForStatementDesignatorExtension RPAREN {: impl.forLoopStart(); :} Statement {: impl.forLoopEnd(); :} ;
 
 
 ForStatementDesignatorExtension ::= 
