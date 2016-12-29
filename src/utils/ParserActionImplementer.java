@@ -33,6 +33,7 @@ public class ParserActionImplementer {
     public String currentClassName;
     public Struct currentClassParent;
     public Obj currentClass;
+    public boolean currentIfStatementConditionState;
     
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
@@ -275,6 +276,18 @@ public class ParserActionImplementer {
         currentMethod = null;
         currentMethodHasReturn = false;
         Tab.closeScope();
+    }
+    
+    public void statementCheckIfOutcome() {
+//      TODO: implement code generation for if-else     
+    }
+    
+    public void statementCheckIfCondition(Struct condition, int line) {
+        if(condition.getKind() != Struct.Bool) {
+            reportError("Error! Condition is not of kind bool. Line ", line);
+        } else {
+            
+        }
     }
     
     public void statementCheckPrint(Struct expr, Integer number, int line) {

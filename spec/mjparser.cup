@@ -69,12 +69,11 @@ non terminal StatementList, Statement, StatementMatched, StatementUnmatched, For
 non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
 non terminal PrintExtension ; 
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
-non terminal Condition, ConditionTerm, ConditionFact ;
 non terminal IfStatement, IfCondition ;
 non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
 
 non terminal Obj Designator, IdentList, IdentDecl ;
-non terminal Struct Type, Expr, ExprList, Term, TermList, Factor, FactorList ;
+non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm, ExprList, Term, TermList, Factor, FactorList ;
 
 precedence left ELSE;
 
@@ -409,25 +408,25 @@ ForStatementConditionExtension ::=
 //IF ELSE STATEMENT ------------------------------------------------------------
 //------------------------------------------------------------------------------
 IfStatement ::=     
-                IfCondition Statement ELSE Statement 
-        |       IfCondition Statement;
+                IfCondition:ifCondition Statement:ifStatement ELSE Statement:elseStatement 
+        |       IfCondition:ifCondition Statement:ifStatement ;
 
 
-IfCondition ::= IF LPAREN Condition RPAREN;
+IfCondition ::= IF LPAREN Condition:condition RPAREN {: impl.statementCheckIfCondition(condition, conditionleft); :};
 
 
 Condition ::=       
-                ConditionTerm 
+                ConditionTerm:conditionTerm {: RESULT = conditionTerm; :}
         |       ConditionTerm OR Condition ;
 
  			   
 ConditionTerm ::=   
-                ConditionFact 
-        |       ConditionFact  AND ConditionTerm ;
+                ConditionFact:conditionFact {: RESULT = conditionFact; :}
+        |       ConditionFact AND ConditionTerm ;
  		
 		   
 ConditionFact ::=   
-                Expr 
+                Expr:expr {: RESULT = expr; :}
         |       Expr Relop Expr ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
