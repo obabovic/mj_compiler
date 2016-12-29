@@ -128,16 +128,27 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct compareTypes(Obj designator, Struct expr, int line) {
+    public Struct compareTypes(Struct type1, Struct type2, int line) {
         Struct res = null;
         
-        if(designator.getKind() == Obj.Con)
+        if(type1.getKind() == Obj.Con)
             reportError("Error! Left part of equation is a constant on line "+line);
-        else if(designator.getType().assignableTo(expr))
-            res = designator.getType();
+        else if(type1.assignableTo(type2)) {
+            res = type1;
+        }
         else
             reportError("Error! Types are incompatible on line "+line);
         
+        return res;
+    }
+    
+    public Struct checkIfInt(Struct type, int line) {
+        Struct res = Tab.noType;
+        if(type != Tab.intType) {
+            reportError("Error! Type is not int. Line ", line);
+        } else {
+            res = type;
+        }
         return res;
     }
     
@@ -283,6 +294,14 @@ public class ParserActionImplementer {
     }
     
     public void statementCheckIfCondition(Struct condition, int line) {
+        if(condition.getKind() != Struct.Bool) {
+            reportError("Error! Condition is not of kind bool. Line ", line);
+        } else {
+            
+        }
+    }
+    
+    public void statementCheckForCondition(Struct condition, int line) {
         if(condition.getKind() != Struct.Bool) {
             reportError("Error! Condition is not of kind bool. Line ", line);
         } else {

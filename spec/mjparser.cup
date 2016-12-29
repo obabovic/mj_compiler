@@ -66,14 +66,13 @@ non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, Cla
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
-non terminal PrintExtension ; 
+non terminal DesignatorStatement, DesignatorAssign, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
 
-non terminal Obj Designator, IdentList, IdentDecl ;
-non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm, ExprList, Term, TermList, Factor, FactorList ;
+non terminal Obj Designator, IdentDecl ;
+non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm, Term, TermList, Factor ;
 
 precedence left ELSE;
 
@@ -346,8 +345,12 @@ Designator ::=  IdentDecl:identDecl {: RESULT = identDecl; :}
 
 
 DesignatorAssign ::=
-                Designator:des Assignop:op Expr:expr {: RESULT = impl.compareTypes(des, expr, desleft); :}
+                Designator:des Assignop:op Expr:expr {: RESULT = impl.compareTypes(des.getType(), expr, desleft); :}
         |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+
+ActPars ::=     Expr:expr {: RESULT = expr; :}
+        |       Expr COMMA ActPars ;
 
 
 IdentDecl ::=   IDENT:ident {: RESULT = impl.resolveIdentificator(ident, identleft, false); :} 
@@ -398,7 +401,7 @@ ForStatementDesignatorExtension ::=
 
 
 ForStatementConditionExtension ::=  
-                Condition 
+                Condition:condition {: impl.statementCheckForCondition(condition, conditionleft); :}
         |       /* epsilon */ ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -427,34 +430,24 @@ ConditionTerm ::=
 		   
 ConditionFact ::=   
                 Expr:expr {: RESULT = expr; :}
-        |       Expr Relop Expr ;
+        |       Expr:expr1 Relop:relop Expr:expr2 {: RESULT = impl.compareTypes(expr1, expr2, expr1left); :};
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 
 
 //EXPR -------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-ActPars ::=     ExprList:exprList {: RESULT = exprList; :};
-
-
-ExprList ::=    Expr:expr {: RESULT = expr; :}
-        |       Expr COMMA ExprList ;			  
-
-			  
+//------------------------------------------------------------------------------			  
 Expr ::=        TermList:termList {: RESULT = termList; :}
-        |       SUB TermList ;
+        |       SUB TermList:termList {: RESULT = termList; :} ;
 		 
 	 
-TermList ::=    Term:term {: RESULT = term; :}
-        |       Term Addop TermList ;		 
+TermList ::=    Term:term {: RESULT = impl.checkIfInt(term, termleft); :}
+        |       Term:term Addop:addop TermList:termList {: :};		 
 
 
-Term ::=        FactorList:factorList {: RESULT = factorList; :}  ;
-
-
-FactorList ::=  Factor:factor {: RESULT = factor; :} 
-        |       FactorList Mulop Factor ;
+Term ::=        Factor:factor {: RESULT = factor; :} 
+        |       Term Mulop Factor ;
 
 
 Factor ::=       
