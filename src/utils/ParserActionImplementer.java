@@ -102,6 +102,9 @@ public class ParserActionImplementer {
             log.info(tmp);
         }
         presentSymbolOccurences();
+        
+        Code.dataSize = Tab.currentScope().getnVars();
+        
         Tab.chainLocalSymbols(currentProgram);
         Tab.closeScope();
     }
@@ -132,15 +135,13 @@ public class ParserActionImplementer {
     
     public Struct compareTypes(Struct type1, Struct type2, int line) {
         Struct res = null;
-        
         if(type1.getKind() == Obj.Con)
             reportError("Error! Left part of equation is a constant on line "+line);
-        else if(type1.assignableTo(type2)) {
+        else if(!type1.assignableTo(type2)) 
+            reportError("Error! Types are incompatible on line "+line);
+        else {
             res = type1;
         }
-        else
-            reportError("Error! Types are incompatible on line "+line);
-        
         return res;
     }
     
@@ -363,21 +364,84 @@ public class ParserActionImplementer {
     }
     
     
-    public Obj designatorCheckType(Obj des, DesignatorAllowedType type, int line) {
+    public Obj designatorInc(Obj des, int line) {
         Obj res = null;
         if(des == Tab.noObj) {
             reportError("Error! Designator is no object type on line ", line);
         } else {
-            switch(type) {
-            case FOR_INC:
-            case FOR_DEC:
-                int tmp = des.getKind();
-                if((tmp != Obj.Var)&&(tmp != Obj.Fld)&&(tmp != Obj.Elem)) {
-                    reportError("Error! Designator is not of kind var or class field on line ", line);
-                } else if(des.getType() != Tab.intType) {
-                    reportError("Error! Designator is not of type int on line ", line);
+            int tmp = des.getKind();
+            if((tmp != Obj.Var)&&(tmp != Obj.Fld)&&(tmp != Obj.Elem)) {
+                reportError("Error! Designator is not of kind var or class field on line ", line);
+            } else if(des.getType() != Tab.intType) {
+                reportError("Error! Designator is not of type int on line ", line);
+            } else {
+                if (des.getKind() == Obj.Elem)
+                {
+                    Code.put(Code.dup2);
                 }
-                break;
+                Code.load(des);
+                Code.loadConst(1);
+                Code.put(Code.add);
+                Code.store(des);
+                res=des;
+            }
+        }
+        return res;
+    }
+    
+    public Obj designatorDec(Obj des, int line) {
+        Obj res = null;
+        if(des == Tab.noObj) {
+            reportError("Error! Designator is no object type on line ", line);
+        } else {
+            int tmp = des.getKind();
+            if((tmp != Obj.Var)&&(tmp != Obj.Fld)&&(tmp != Obj.Elem)) {
+                reportError("Error! Designator is not of kind var or class field on line ", line);
+            } else if(des.getType() != Tab.intType) {
+                reportError("Error! Designator is not of type int on line ", line);
+            } else {
+                if (des.getKind() == Obj.Elem)
+                {
+                    Code.put(Code.dup2);
+                }
+                Code.load(des);
+                Code.loadConst(1);
+                Code.put(Code.sub);
+                Code.store(des);
+                res=des;
+            }
+        }
+        return res;
+    }
+    
+    public Struct designatorCheckAssign(Obj des, Struct expr, int line) {
+        Struct res = null;
+        if(des.getKind() == Obj.Con)
+            reportError("Error! Left part of equation is a constant on line "+line);
+        else if(!des.getType().assignableTo(expr)) 
+            reportError("Error! Types are incompatible on line "+line);
+        else {
+            res = des.getType();
+            Code.store(des);
+        }
+        return res;
+    }
+    
+    public Struct designatorCallMethod(Obj designator, Obj ActPars, int line) {
+        Struct res = null;
+        if(designator.getKind() != Obj.Meth) {
+            reportError("Error! Designator is not of kind Method. Line ", line);
+        } else {
+            reportInfo("Method of name \"" + designator.getName() + "\" has been detected on line ", line);
+            
+            res = designator.getType();
+            
+            int destinationAddress = designator.getAdr() - Code.pc;
+            Code.put(Code.call);
+            Code.put2(destinationAddress);
+            
+            if(designator.getType() != Tab.noType) {
+                Code.put(Code.pop);
             }
         }
         return res;
@@ -389,6 +453,8 @@ public class ParserActionImplementer {
             res = Tab.noType;
         } else {
             res = designator.getType();
+            
+            Code.load(designator);
         }
         return res;
     }
@@ -405,7 +471,9 @@ public class ParserActionImplementer {
             } else if (temp.getType() == Tab.noType) {
                 reportError("Error! Method is type of void and used as Rvalue on line ", line);
             } else {
-                //TODO: generate valid designator code expression 
+                int destinationAddress = designator.getAdr() - Code.pc;
+                Code.put(Code.call);
+                Code.put2(destinationAddress);
             }
             res = (temp != null)?temp.getType():Tab.noType;
         }

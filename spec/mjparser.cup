@@ -320,12 +320,12 @@ StatementMatched ::=
         |       ReturnStatement SEMI 
         |       ReadStatement:readStatement SEMI 
         |       CONTINUE:cont SEMI {: impl.statementCheckContinue(contleft); :}
-        |       BREAK:brk SEMI {: impl.statementCheckBreak(brkleft); :}
-        |       LBRACE StatementList RBRACE ;
+        |       BREAK:brk SEMI {: impl.statementCheckBreak(brkleft); :} ;
 
 
 StatementUnmatched ::=  
-                IfStatement ;
+                IfStatement 
+        |       LBRACE StatementList RBRACE ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -335,10 +335,10 @@ StatementUnmatched ::=
 //------------------------------------------------------------------------------
 DesignatorStatement ::= 
                 DesignatorAssign
-        |       Designator:des LPAREN RPAREN {:  :}
-        |       Designator:des LPAREN ActPars RPAREN {:  :}
-        |       Designator:des INC:inc {: RESULT = impl.designatorCheckType(des, DesignatorAllowedType.FOR_INC, desleft); :}
-        |       Designator:des DEC:dec {: RESULT = impl.designatorCheckType(des, DesignatorAllowedType.FOR_DEC, desleft); :} ;
+        |       Designator:des LPAREN RPAREN {: RESULT = impl.designatorCallMethod(des, null, desleft); :}
+        |       Designator:des LPAREN ActPars RPAREN {: :}
+        |       Designator:des INC:inc {: RESULT = impl.designatorInc(des, desleft); :}
+        |       Designator:des DEC:dec {: RESULT = impl.designatorDec(des, desleft); :} ;
 
 
 Designator ::=  
@@ -352,7 +352,7 @@ DesignatorExtension ::=
 
 
 DesignatorAssign ::=
-                Designator:des Assignop:op Expr:expr {: RESULT = impl.compareTypes(des.getType(), expr, desleft); :}
+                Designator:des Assignop:op Expr:expr {: RESULT = impl.designatorCheckAssign(des, expr, desleft); :}
         |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 

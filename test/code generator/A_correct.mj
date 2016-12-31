@@ -1,9 +1,17 @@
 program Program 
       const int pi = 3, e = 2;
+      int a,b;
 {
+
+    int k () int c; {
+        c = 3;
+        c--;
+        return c;
+    }
+
     void main() int i; int x[];
     {     
-      print(4);
-      print(5);
+        i = k();
+        print(i);
     }
 }
