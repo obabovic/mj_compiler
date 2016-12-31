@@ -363,7 +363,6 @@ public class ParserActionImplementer {
         }
     }
     
-    
     public Obj designatorInc(Obj des, int line) {
         Obj res = null;
         if(des == Tab.noObj) {
@@ -414,7 +413,7 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct designatorCheckAssign(Obj des, Struct expr, int line) {
+    public Struct designatorCheckAssign(Obj des, Integer op, Struct expr, int line) {
         Struct res = null;
         if(des.getKind() == Obj.Con)
             reportError("Error! Left part of equation is a constant on line "+line);
@@ -422,6 +421,27 @@ public class ParserActionImplementer {
             reportError("Error! Types are incompatible on line "+line);
         else {
             res = des.getType();
+            Code.load(des);
+            switch(op) {
+                case 0: // ASSIGN
+                    Code.store(des);
+                    break;
+                case Code.add:
+                    
+                    break;
+                case Code.sub:
+                    
+                    break;
+                case Code.mul:
+                    
+                    break;
+                case Code.div:
+                    
+                    break;
+                case Code.rem:
+                    
+                    break;
+            }
             Code.store(des);
         }
         return res;
@@ -442,6 +462,39 @@ public class ParserActionImplementer {
             
             if(designator.getType() != Tab.noType) {
                 Code.put(Code.pop);
+            }
+        }
+        return res;
+    }
+    
+    public Struct termListAddOp(Struct term, Integer operation, Struct termList, int line) {
+        Struct res = null;
+        
+        if(term == Tab.noType) {
+            reportError("Error! Term is not of any type. Line ", line);
+        } else if(term.getKind() != Struct.Int) {
+            reportError("Error! Term is not of type int. Line ", line);
+            res = Tab.noType;
+        } else {
+            res = Tab.intType;
+            Code.put(operation.intValue());      
+        }
+        return res;
+    }
+    
+    public Struct termMulOp(Struct term, Integer operation, Struct factor, int line) {		
+        Struct res = null;
+
+        if((term == Tab.noType) || (factor == Tab.noType)) {
+            reportError("Error! Operands are not of any type. Line ", line);
+        } else {
+            if((term.getKind() != Struct.Int) || (factor.getKind() != Struct.Int)) {
+                reportError("Error! Operands are not of type int. Line ", line);
+                res = Tab.noType;   
+            }
+            else {
+                Code.put(operation.intValue());
+                res = term;
             }
         }
         return res;
@@ -546,7 +599,6 @@ public class ParserActionImplementer {
             res = type;
         return res;
     }
-    
     
     //LEVEL 2
     public void onGlobalMethodCalled() {

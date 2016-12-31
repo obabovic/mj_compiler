@@ -1,6 +1,7 @@
 package mj_compiler;
 
 import java_cup.runtime.*;
+import rs.etf.pp1.mj.runtime.Code;
 import org.apache.log4j.*;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.*;
@@ -70,10 +71,10 @@ non terminal StatementList, Statement, StatementMatched, StatementUnmatched, For
 non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
-non terminal Relop, Assignop, Addop, AddopLeft, AddopRight, Mulop, MulopLeft, MulopRight ; 
-
+non terminal Integer Addop, Mulop, Assignop, Relop, AddopLeft, AddopRight, MulopLeft, MulopRight ;  
 non terminal Obj Designator;
 non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm, Term, TermList, Factor ;
+
 
 precedence left ELSE;
 
@@ -352,7 +353,7 @@ DesignatorExtension ::=
 
 
 DesignatorAssign ::=
-                Designator:des Assignop:op Expr:expr {: RESULT = impl.designatorCheckAssign(des, expr, desleft); :}
+                Designator:des Assignop:op Expr:expr {: RESULT = impl.designatorCheckAssign(des, op, expr, desleft); :}
         |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
@@ -446,11 +447,11 @@ Expr ::=        TermList:termList {: RESULT = termList; :}
 		 
 	 
 TermList ::=    Term:term {: RESULT = impl.checkIfInt(term, termleft); :}
-        |       Term:term Addop:addop TermList:termList {: :};		 
+        |       Term:term Addop:addop TermList:termList {: RESULT = impl.termListAddOp(term, addop, termList, termleft); :};		 
 
 
 Term ::=        Factor:factor {: RESULT = factor; :} 
-        |       Term Mulop Factor ;
+        |       Term:term Mulop:mulop Factor:factor {: RESULT = impl.termMulOp(term, mulop, factor, termleft); :} ;
 
 
 Factor ::=       
@@ -470,42 +471,42 @@ Factor ::=
 
 //OPERATION --------------------------------------------------------------------
 //------------------------------------------------------------------------------
-Relop ::=       EQ 
-        |       NEQ 
-        |       GT
-        |       GEQ 
-        |       LT 
-        |       LEQ ; 
+Relop ::=       EQ {: RESULT = new Integer(Code.eq); :}
+        |       NEQ {: RESULT = new Integer(Code.ne); :}
+        |       GT {: RESULT = new Integer(Code.gt); :}
+        |       GEQ {: RESULT = new Integer(Code.ge); :} 
+        |       LT {: RESULT = new Integer(Code.lt); :}
+        |       LEQ {: RESULT = new Integer(Code.le); :} ; 
 
 
-Assignop ::=    ASSIGN 
-        |       AddopRight 
-        |       MulopRight ;
+Assignop ::=    ASSIGN {: RESULT = new Integer(0); :}
+        |       AddopRight:addopLeft {: RESULT = addopLeft; :}
+        |       MulopRight:addopRight {: RESULT = addopRight; :};
 
 
-Addop ::=       AddopLeft 
-        |       AddopRight ;
+Addop ::=       AddopLeft:addopLeft {: RESULT = addopLeft; :} 
+        |       AddopRight:addopRight {: RESULT = addopRight; :} ;
 
 
-AddopLeft ::=   ADD 
-        |       SUB ;
+AddopLeft ::=   ADD {: RESULT = new Integer(Code.add); :}
+        |       SUB {: RESULT = new Integer(Code.sub); :} ;
 
 
-AddopRight ::=  ASSIGNPLUS 
-        |       ASSIGNMINUS ;
+AddopRight ::=  ASSIGNPLUS {: RESULT = new Integer(Code.add); :}
+        |       ASSIGNMINUS {: RESULT = new Integer(Code.sub); :} ;
 
 
-Mulop ::=       MulopLeft 
-        |       MulopRight ;
+Mulop ::=       MulopLeft:mulopLeft {: RESULT = mulopLeft; :}
+        |       MulopRight:mulopRight {: RESULT = mulopRight; :};
 
 
-MulopLeft ::=   MUL 
-        |       DIV 
-        |       MOD ;
+MulopLeft ::=   MUL {: RESULT = new Integer(Code.mul); :}
+        |       DIV {: RESULT = new Integer(Code.div); :}
+        |       MOD {: RESULT = new Integer(Code.rem); :} ;
 
 
-MulopRight ::=  ASSIGNMUL 
-        |       ASSIGNDIV 
-        |       ASSIGNMOD ;
+MulopRight ::=  ASSIGNMUL {: RESULT = new Integer(Code.mul); :}
+        |       ASSIGNDIV {: RESULT = new Integer(Code.div); :}
+        |       ASSIGNMOD {: RESULT = new Integer(Code.rem); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
