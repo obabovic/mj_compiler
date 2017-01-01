@@ -40,6 +40,11 @@ public class ParserActionImplementer {
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
     public static final int BOOL = 24;
+    public static final int ASSIGN_PLUS = 100 + Code.add;
+    public static final int ASSIGN_MINUS = 100 + Code.sub;
+    public static final int ASSIGN_MUL = 100 + Code.mul;
+    public static final int ASSIGN_DIV = 100 + Code.div;
+    public static final int ASSIGN_REM = 100 + Code.rem;
     
     
     public static final Struct boolType = new Struct(Struct.Bool);
@@ -145,12 +150,12 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct checkIfInt(Struct type, int line) {
-        Struct res = Tab.noType;
-        if(type != Tab.intType) {
+    public Obj checkIfInt(Obj item, int line) {
+        Obj res = Tab.noObj;
+        if(item.getType() != Tab.intType) {
             reportError("Error! Type is not int. Line ", line);
         } else {
-            res = type;
+            res = item;
         }
         return res;
     }
@@ -421,28 +426,14 @@ public class ParserActionImplementer {
             reportError("Error! Types are incompatible on line "+line);
         else {
             res = des.getType();
-            Code.load(des);
-            switch(op) {
-                case 0: // ASSIGN
-                    Code.store(des);
-                    break;
-                case Code.add:
-                    
-                    break;
-                case Code.sub:
-                    
-                    break;
-                case Code.mul:
-                    
-                    break;
-                case Code.div:
-                    
-                    break;
-                case Code.rem:
-                    
-                    break;
+            if(op.intValue() == 0) {
+                // ASSIGN
+                Code.store(des);
+            } else {
+                Code.load(des);
+                Code.put(getOpCode(op));
+                Code.store(des);
             }
-            Code.store(des);
         }
         return res;
     }
@@ -467,30 +458,36 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct termListAddOp(Struct term, Integer operation, Struct termList, int line) {
-        Struct res = null;
+    public Obj termListAddOp(Obj term, Integer operation, Obj termList, int line) {
+        Obj res = null;
         
-        if(term == Tab.noType) {
+        if(term == Tab.noObj) {
             reportError("Error! Term is not of any type. Line ", line);
         } else if(term.getKind() != Struct.Int) {
             reportError("Error! Term is not of type int. Line ", line);
-            res = Tab.noType;
+            res = Tab.noObj;
         } else {
-            res = Tab.intType;
-            Code.put(operation.intValue());      
+            res = new Obj(Struct.Int,"",Tab.intType);
+            int opCode = getOpCode(operation);
+            Code.put(opCode);
+            if(operation>100) {
+//                Obj temp = Tab.find(term.get);
+//                Code.store(term);
+            }
+            
         }
         return res;
     }
     
-    public Struct termMulOp(Struct term, Integer operation, Struct factor, int line) {		
-        Struct res = null;
+    public Obj termMulOp(Obj term, Integer operation, Obj factor, int line) {		
+        Obj res = null;
 
-        if((term == Tab.noType) || (factor == Tab.noType)) {
+        if((term.getType() == Tab.noType) || (factor.getType() == Tab.noType)) {
             reportError("Error! Operands are not of any type. Line ", line);
         } else {
             if((term.getKind() != Struct.Int) || (factor.getKind() != Struct.Int)) {
                 reportError("Error! Operands are not of type int. Line ", line);
-                res = Tab.noType;   
+                res = Tab.noObj;   
             }
             else {
                 Code.put(operation.intValue());
@@ -500,23 +497,23 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct factorNewDesignator(Obj designator, int line) {
-        Struct res = null;
+    public Obj factorNewDesignator(Obj designator, int line) {
+        Obj res = null;
         if(designator == Tab.noObj) {
-            res = Tab.noType;
+            res = Tab.noObj;
         } else {
-            res = designator.getType();
+            res = designator;
             
             Code.load(designator);
         }
         return res;
     }
     
-    public Struct factorNewMethod(Obj designator, int line) {
-        Struct res = null;
+    public Obj factorNewMethod(Obj designator, int line) {
+        Obj res = null;
         if(Obj.Meth != designator.getKind()) {
             reportError("Error! Method "+designator.getName()+" is undefined or the designator is not a method at all. Line ", line);
-            res = Tab.noType;
+            res = Tab.noObj;
         } else {
             Obj temp = Tab.find(designator.getName());
             if(temp == null) {
@@ -528,13 +525,13 @@ public class ParserActionImplementer {
                 Code.put(Code.call);
                 Code.put2(destinationAddress);
             }
-            res = (temp != null)?temp.getType():Tab.noType;
+            res = (temp != null)?temp:Tab.noObj;
         }
         return res;
     }
     
-    public Struct factorNewNumber(Integer number, int line) {
-        Struct res = null;
+    public Obj factorNewNumber(Integer number, int line) {
+        Obj res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr(number.intValue());
         
@@ -542,12 +539,12 @@ public class ParserActionImplementer {
         
         Code.load(temp);
         
-        res = temp.getType();
+        res = temp;
         return res;
     }
     
-    public Struct factorNewChar(Character ch, int line) {
-        Struct res = null;
+    public Obj factorNewChar(Character ch, int line) {
+        Obj res = null;
         Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
         temp.setAdr(ch.charValue());
         
@@ -555,12 +552,12 @@ public class ParserActionImplementer {
         
         Code.load(temp);
         
-        res = temp.getType();
+        res = temp;
         return res;
     }
     
-    public Struct factorNewBool(Boolean b, int line) {
-        Struct res = null;
+    public Obj factorNewBool(Boolean b, int line) {
+        Obj res = null;
         Obj boolObj = Tab.find("bool");
         Obj temp = Tab.insert(Obj.Con, "", boolObj.getType());
         temp.setAdr((b.booleanValue()==true)?1:0);
@@ -569,34 +566,44 @@ public class ParserActionImplementer {
         
         Code.load(temp);
         
-        res = temp.getType();
+        res = temp;
         return res;
     }
     
-    public Struct factorNewExpr(Struct expr, int line) {
-        Struct res = null;
-        res = expr;
+    public Obj factorNewExpr(Struct expr, int line) {
+        Obj res = null;
+//      TODO: refactor this method        
+//      res = expr;  
         return res;
     }
     
-    public Struct factorNewArray(Struct type, Struct expr, int line) {
-        Struct res = null;
+    public Obj factorNewArray(Struct type, Struct expr, int line) {
+        Obj res = null;
         if(!Tab.intType.equals(expr)) {
             reportError("Error! Expression must be of type Integer on line ", line);
         } else {
-            res = new Struct(Struct.Array, type);
+            res = new Obj(Struct.Array,"",new Struct(Struct.Array, type));
         }
         return res;
     }
     
-    public Struct factorNewClass(Struct type, int line) {
-        Struct res = null;
-        Struct temp = new Struct(Struct.Class);
-        if(!type.assignableTo(temp)) {
+    public Obj factorNewClass(Struct type, int line) {
+        Obj res = null;
+        Obj temp = new Obj(Struct.Class,"",new Struct(Struct.Class));
+        if(!type.assignableTo(temp.getType())) {
             reportError("Error! Element must be of type Class on line ", line);
-            res = Tab.noType;
+            res = Tab.noObj;
         } else 
-            res = type;
+            res = temp;
+        return res;
+    }
+    
+    //Function getOpCode
+    //@Params: opCode - code of a given operation
+    //@Return: changed opCode according to the type of opcode (ADD or ASSIGN_PLUS)
+    public Integer getOpCode(Integer opCode) {
+        Integer res;
+        res = (opCode.intValue()>100)?opCode.intValue()-100:opCode.intValue();
         return res;
     }
     

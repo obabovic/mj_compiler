@@ -6,8 +6,8 @@ program Program
     int k () int c; {
         a = 4;
         b = 3;
-        c = a % b + 3 * 'a';
-        return c;
+        c = a+=b;
+        return a;
     }
 
     void main() int i; int x[];

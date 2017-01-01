@@ -72,8 +72,8 @@ non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Integer Addop, Mulop, Assignop, Relop, AddopLeft, AddopRight, MulopLeft, MulopRight ;  
-non terminal Obj Designator;
-non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm, Term, TermList, Factor ;
+non terminal Obj Designator, Term, Factor, TermList ;
+non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm ;
 
 
 precedence left ELSE;
@@ -442,8 +442,8 @@ ConditionFact ::=
 
 //EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------			  
-Expr ::=        TermList:termList {: RESULT = termList; :}
-        |       SUB TermList:termList {: RESULT = termList; :} ;
+Expr ::=        TermList:termList {: RESULT = termList.getType(); :}
+        |       SUB TermList:termList {: RESULT = termList.getType(); :} ;
 		 
 	 
 TermList ::=    Term:term {: RESULT = impl.checkIfInt(term, termleft); :}
@@ -492,8 +492,8 @@ AddopLeft ::=   ADD {: RESULT = new Integer(Code.add); :}
         |       SUB {: RESULT = new Integer(Code.sub); :} ;
 
 
-AddopRight ::=  ASSIGNPLUS {: RESULT = new Integer(Code.add); :}
-        |       ASSIGNMINUS {: RESULT = new Integer(Code.sub); :} ;
+AddopRight ::=  ASSIGNPLUS {: RESULT = new Integer(100+Code.add); :}
+        |       ASSIGNMINUS {: RESULT = new Integer(100+Code.sub); :} ;
 
 
 Mulop ::=       MulopLeft:mulopLeft {: RESULT = mulopLeft; :}
@@ -505,8 +505,8 @@ MulopLeft ::=   MUL {: RESULT = new Integer(Code.mul); :}
         |       MOD {: RESULT = new Integer(Code.rem); :} ;
 
 
-MulopRight ::=  ASSIGNMUL {: RESULT = new Integer(Code.mul); :}
-        |       ASSIGNDIV {: RESULT = new Integer(Code.div); :}
-        |       ASSIGNMOD {: RESULT = new Integer(Code.rem); :} ;
+MulopRight ::=  ASSIGNMUL {: RESULT = new Integer(100+Code.mul); :}
+        |       ASSIGNDIV {: RESULT = new Integer(100+Code.div); :}
+        |       ASSIGNMOD {: RESULT = new Integer(100+Code.rem); :} ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
