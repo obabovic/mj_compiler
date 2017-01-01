@@ -333,11 +333,10 @@ public class ParserActionImplementer {
         if((expr != Tab.charType) && (expr != Tab.intType)&&(expr.getKind() != Struct.Bool))
                 reportError("Error! Expression is not of type int, char or bool on line ", line);
         else {
+            Code.loadConst(number);
             if(expr == Tab.intType) {
-                Code.loadConst(5);
                 Code.put(Code.print);
             } else if (expr == Tab.charType) {
-                Code.loadConst(1);
                 Code.put(Code.bprint);
             }
         }
@@ -352,6 +351,14 @@ public class ParserActionImplementer {
                 reportError("Error! Designator is not of kind var, array element or class field on line ", line);
             } else if((designator.getType() != Tab.intType)&&(designator.getType() != Tab.charType)&&(designator.getType().getKind() != Struct.Bool)) {
                 reportError("Error! Designator is not of type int, char or bool on line ", line);
+            } else {
+                if(designator.getType() == Tab.intType || designator.getType().getKind() == Struct.Bool) {
+                    Code.put(Code.read);
+                    Code.store(designator);
+                } else {
+                    Code.put(Code.bread);
+                    Code.store(designator);
+                }
             }
        }
     }
