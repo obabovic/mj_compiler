@@ -314,7 +314,7 @@ public class ParserActionImplementer {
     }
     
     public void statementCheckIfCondition(Struct condition, int line) {
-        if(condition.getKind() != Struct.Bool) {
+        if(condition != Tab.intType) {
             reportError("Error! Condition is not of kind bool. Line ", line);
         } else {
             
@@ -431,7 +431,7 @@ public class ParserActionImplementer {
                 Code.store(des);
             } else {
                 Code.load(des);
-                Code.put(getOpCode(op));
+                Code.put(getOpCode(op.intValue()));
                 Code.store(des);
             }
         }
@@ -463,18 +463,16 @@ public class ParserActionImplementer {
         
         if(term == Tab.noObj) {
             reportError("Error! Term is not of any type. Line ", line);
-        } else if(term.getKind() != Struct.Int) {
+        } else if(term.getType() != Tab.intType) {
             reportError("Error! Term is not of type int. Line ", line);
             res = Tab.noObj;
         } else {
             res = new Obj(Struct.Int,"",Tab.intType);
-            int opCode = getOpCode(operation);
-            Code.put(opCode);
+            Code.put(getOpCode(operation.intValue()));
             if(operation>100) {
-//                Obj temp = Tab.find(term.get);
-//                Code.store(term);
+                Code.store(term);
+                Code.load(term);
             }
-            
         }
         return res;
     }
@@ -485,12 +483,16 @@ public class ParserActionImplementer {
         if((term.getType() == Tab.noType) || (factor.getType() == Tab.noType)) {
             reportError("Error! Operands are not of any type. Line ", line);
         } else {
-            if((term.getKind() != Struct.Int) || (factor.getKind() != Struct.Int)) {
+            if((term.getType() != Tab.intType) || (factor.getType() != Tab.intType)) {
                 reportError("Error! Operands are not of type int. Line ", line);
                 res = Tab.noObj;   
             }
             else {
-                Code.put(operation.intValue());
+                Code.put(getOpCode(operation.intValue()));
+                if(operation>100) {
+                    Code.store(term);
+                    Code.load(term);
+                }
                 res = term;
             }
         }

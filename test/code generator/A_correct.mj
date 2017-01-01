@@ -5,14 +5,13 @@ program Program
 
     int k () int c; {
         a = 4;
-        b = 3;
-        c = a+=b;
         return a;
     }
 
     void main() int i; int x[];
     {     
         i = k();
+        i *= a += a += a;
         print(i);
     }
 }
