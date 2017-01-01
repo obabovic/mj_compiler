@@ -11,7 +11,7 @@ program Program
     void main() int i; int x[];
     {     
         i = k();
-        i *= a += a += a;
+        i *= -a+3;
         print(i);
     }
 }

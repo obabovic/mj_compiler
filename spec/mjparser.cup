@@ -443,7 +443,7 @@ ConditionFact ::=
 //EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------			  
 Expr ::=        TermList:termList {: RESULT = termList.getType(); :}
-        |       SUB TermList:termList {: RESULT = termList.getType(); :} ;
+        |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); :} ;
 		 
 	 
 TermList ::=    Term:term {: RESULT = impl.checkIfInt(term, termleft); :}
