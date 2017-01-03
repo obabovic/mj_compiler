@@ -34,6 +34,7 @@ public class ParserActionImplementer {
     
     public String currentClassName;
     public Struct currentClassParent;
+    public Obj currentDesignatorArray;
     public Obj currentClass;
     public boolean currentIfStatementConditionState;
     
@@ -131,15 +132,18 @@ public class ParserActionImplementer {
     
     public Struct resolveType(String typeName, int line) {
         Struct res = null;
+        
         Obj obj = Tab.find(typeName);
         if((obj == Tab.noObj) || (obj.getKind() != Obj.Type)) 
             reportError("Error! Undefined type \"" + typeName + "\" on line ", line);
         res = obj.getType();
+        
         return res;
     }
     
     public Struct compareTypes(Struct type1, Struct type2, int line) {
         Struct res = null;
+        
         if(type1.getKind() == Obj.Con)
             reportError("Error! Left part of equation is a constant on line "+line);
         else if(!type1.assignableTo(type2)) 
@@ -147,21 +151,36 @@ public class ParserActionImplementer {
         else {
             res = type1;
         }
+        
         return res;
     }
     
     public Obj checkIfInt(Obj item, int line) {
         Obj res = Tab.noObj;
+        
         if(item.getType() != Tab.intType) {
             reportError("Error! Type is not int. Line ", line);
         } else {
             res = item;
         }
+        
         return res;
     }
     
-    public Obj resolveIdentificator(String ident, int line, boolean isArray) {
+    public void setDesignatorArrayExtension(String ident, int line) {
+        Obj temp = Tab.find(ident);
+        if(temp.equals(Tab.noObj)) {
+            reportError("Error! undefined identificator named \""+ident+"\" on line ", line);
+        }
+        if(temp.getType().getKind() == Struct.Array) {
+            //if the left side identificator is an array
+            currentDesignatorArray = temp;
+        }
+    }
+    
+    public Obj resolveIdentificator(String ident, int line) {
         Obj res = null;
+        
         Obj temp = Tab.find(ident);
         if(temp.equals(Tab.noObj)) {
             res = Tab.noObj;
@@ -170,12 +189,13 @@ public class ParserActionImplementer {
             res = temp;
             if (temp.getKind() == Obj.Con) 						
                 reportInfo("Constant named \"" + ident + "\" has been detected on line ", line);
-            else if (temp.getKind() == Obj.Var) 
+            else if (temp.getKind() == Obj.Var)
                 if (temp.getLevel() == 0) 
                     reportInfo("Global variable named \"" + ident + "\" has been detected on line ", line);
                 else 
                     reportInfo("Local variable named \"" + ident + "\" has been detected on line ", line);
         }
+        
         return res;
     }
     
@@ -330,13 +350,15 @@ public class ParserActionImplementer {
     }
     
     public void statementCheckPrint(Struct expr, Integer number, int line) {
-        if((expr != Tab.charType) && (expr != Tab.intType)&&(expr.getKind() != Struct.Bool))
+        Struct typeToCheck = (expr.getKind()==Struct.Array)?expr.getElemType():expr;
+        
+        if(((typeToCheck != Tab.charType) && (typeToCheck != Tab.intType)&&(typeToCheck.getKind() != Struct.Bool)))
                 reportError("Error! Expression is not of type int, char or bool on line ", line);
         else {
             Code.loadConst(number);
-            if(expr == Tab.intType) {
+            if(typeToCheck == Tab.intType) {
                 Code.put(Code.print);
-            } else if (expr == Tab.charType) {
+            } else if (typeToCheck == Tab.charType) {
                 Code.put(Code.bprint);
             }
         }
@@ -375,8 +397,23 @@ public class ParserActionImplementer {
         }
     }
     
+    public Obj designatorExtensionResolveArray(int line) {
+        Obj res = null;
+        
+        if(!(currentDesignatorArray.getType().getKind() == Struct.Array)) {
+            reportError("Error! Sentence is not of kind array on line ", line);
+        } else {
+            Code.load(currentDesignatorArray);
+            res = new Obj(Obj.Var,"",new Struct(Struct.Array, currentDesignatorArray.getType().getElemType()));
+            currentDesignatorArray = res;
+        }
+        
+        return res;
+    }
+    
     public Obj designatorInc(Obj des, int line) {
         Obj res = null;
+        
         if(des == Tab.noObj) {
             reportError("Error! Designator is no object type on line ", line);
         } else {
@@ -397,11 +434,13 @@ public class ParserActionImplementer {
                 res=des;
             }
         }
+        
         return res;
     }
     
     public Obj designatorDec(Obj des, int line) {
         Obj res = null;
+        
         if(des == Tab.noObj) {
             reportError("Error! Designator is no object type on line ", line);
         } else {
@@ -422,16 +461,38 @@ public class ParserActionImplementer {
                 res=des;
             }
         }
+        
         return res;
     }
     
     public Struct designatorCheckAssign(Obj des, Integer op, Struct expr, int line) {
         Struct res = null;
-        if(des.getKind() == Obj.Con)
+        boolean errorDetected = false;
+        
+        if(des.getKind() == Obj.Con) {
             reportError("Error! Left part of equation is a constant on line "+line);
-        else if(!des.getType().assignableTo(expr)) 
+            errorDetected = true;
+        }
+        else if(des.getType().getKind() == Struct.Array) {
+            if(expr.getKind() == Struct.Array) {
+                if(!(des.getType().getElemType().assignableTo(expr.getElemType()))) {
+                    reportError("Error! Types are incompatible on line "+line);
+                    errorDetected = true;
+                } 
+            } else {
+                if(!(des.getType().getElemType().assignableTo(expr))) {
+                    reportError("Error! Types are incompatible on line "+line);
+                    errorDetected = true;
+                }
+            }
+                
+        } 
+        else if (!(des.getType().assignableTo(expr))) {
             reportError("Error! Types are incompatible on line "+line);
-        else {
+            errorDetected = true;
+        }
+            
+        if (!errorDetected) {
             res = des.getType();
             if(op.intValue() == 0) {
                 // ASSIGN
@@ -447,6 +508,7 @@ public class ParserActionImplementer {
     
     public Struct designatorCallMethod(Obj designator, Obj ActPars, int line) {
         Struct res = null;
+        
         if(designator.getKind() != Obj.Meth) {
             reportError("Error! Designator is not of kind Method. Line ", line);
         } else {
@@ -462,15 +524,16 @@ public class ParserActionImplementer {
                 Code.put(Code.pop);
             }
         }
+        
         return res;
     }
     
     public Obj termListAddOp(Obj term, Integer operation, Obj termList, int line) {
         Obj res = null;
         
-        if(term == Tab.noObj) {
+        if((term == Tab.noObj)||(termList == Tab.noObj)) {
             reportError("Error! Term is not of any type. Line ", line);
-        } else if(term.getType() != Tab.intType) {
+        } else if((term.getType() != Tab.intType)||(termList.getType() != Tab.intType)) {
             reportError("Error! Term is not of type int. Line ", line);
             res = Tab.noObj;
         } else {
@@ -481,6 +544,7 @@ public class ParserActionImplementer {
                 Code.load(term);
             }
         }
+        
         return res;
     }
     
@@ -503,23 +567,26 @@ public class ParserActionImplementer {
                 res = term;
             }
         }
+        
         return res;
     }
     
     public Obj factorNewDesignator(Obj designator, int line) {
         Obj res = null;
+        
         if(designator == Tab.noObj) {
             res = Tab.noObj;
         } else {
             res = designator;
-            
             Code.load(designator);
         }
+        
         return res;
     }
     
     public Obj factorNewMethod(Obj designator, int line) {
         Obj res = null;
+        
         if(Obj.Meth != designator.getKind()) {
             reportError("Error! Method "+designator.getName()+" is undefined or the designator is not a method at all. Line ", line);
             res = Tab.noObj;
@@ -536,43 +603,41 @@ public class ParserActionImplementer {
             }
             res = (temp != null)?temp:Tab.noObj;
         }
+        
         return res;
     }
     
     public Obj factorNewNumber(Integer number, int line) {
         Obj res = null;
+        
         Obj temp = Tab.insert(Obj.Con, "", Tab.intType);
         temp.setAdr(number.intValue());
-        
         reportInfo("Constant of value \"" + number + "\" has been detected on line ", line);
-        
         Code.load(temp);
-        
         res = temp;
+        
         return res;
     }
     
     public Obj factorNewChar(Character ch, int line) {
         Obj res = null;
+        
         Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
         temp.setAdr(ch.charValue());
-        
         reportInfo("Constant of value \"" + ch + "\" has been detected on line ", line);
-        
         Code.load(temp);
-        
         res = temp;
+        
         return res;
     }
     
     public Obj factorNewBool(Boolean b, int line) {
         Obj res = null;
+        
         Obj boolObj = Tab.find("bool");
         Obj temp = Tab.insert(Obj.Con, "", boolObj.getType());
         temp.setAdr((b.booleanValue()==true)?1:0);
-        
         reportInfo("Constant of value \"" + b + "\" has been detected on line ", line);
-        
         Code.load(temp);
         
         res = temp;
@@ -588,22 +653,27 @@ public class ParserActionImplementer {
     
     public Obj factorNewArray(Struct type, Struct expr, int line) {
         Obj res = null;
+        
         if(!Tab.intType.equals(expr)) {
             reportError("Error! Expression must be of type Integer on line ", line);
         } else {
-            res = new Obj(Struct.Array,"",new Struct(Struct.Array, type));
+            res = new Obj(Obj.Var,"",new Struct(Struct.Array, type));
+            Code.put(Code.newarray);
         }
+        
         return res;
     }
     
     public Obj factorNewClass(Struct type, int line) {
         Obj res = null;
+        
         Obj temp = new Obj(Struct.Class,"",new Struct(Struct.Class));
         if(!type.assignableTo(temp.getType())) {
             reportError("Error! Element must be of type Class on line ", line);
             res = Tab.noObj;
         } else 
             res = temp;
+        
         return res;
     }
     
@@ -612,7 +682,9 @@ public class ParserActionImplementer {
     //@Return: changed opCode according to the type of opcode (ADD or ASSIGN_PLUS)
     public Integer getOpCode(Integer opCode) {
         Integer res;
+        
         res = (opCode.intValue()>100)?opCode.intValue()-100:opCode.intValue();
+        
         return res;
     }
     

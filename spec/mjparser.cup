@@ -343,12 +343,12 @@ DesignatorStatement ::=
 
 
 Designator ::=  
-                IDENT:ident DesignatorExtension {: RESULT = impl.resolveIdentificator(ident, identleft, false); :} ;
+                IDENT:ident {: impl.setDesignatorArrayExtension(ident, identleft); :} DesignatorExtension  {: RESULT = (impl.currentDesignatorArray != null)?impl.currentDesignatorArray:impl.resolveIdentificator(ident, identleft); impl.currentDesignatorArray = null; :};
 
 
 DesignatorExtension ::= 
-                DesignatorExtension DOT IDENT
-        |       DesignatorExtension LBRACK Expr RBRACK 
+                DesignatorExtension DOT IDENT 
+        |       DesignatorExtension LBRACK:lbrack {: RESULT = impl.designatorExtensionResolveArray(lbrackleft); :} Expr:expr {: impl.checkIfInt(new Obj(Obj.Var,"",expr), exprleft); :} RBRACK 
         |       /* epsilon */ ;
 
 
@@ -446,7 +446,7 @@ Expr ::=        TermList:termList {: RESULT = termList.getType(); :}
         |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); :} ;
 		 
 	 
-TermList ::=    Term:term {: RESULT = impl.checkIfInt(term, termleft); :}
+TermList ::=    Term:term {: RESULT = term; :}
         |       Term:term Addop:addop TermList:termList {: RESULT = impl.termListAddOp(term, addop, termList, termleft); :};		 
 
 

@@ -3,15 +3,12 @@ program Program
       int a,b;
 {
 
-    int k () int c; {
-        a = 4;
-        return a;
-    }
-
     void main() int i; int x[];
     {     
-        i = k();
-        i *= -a+3;
-        print(i);
+        x = new int[4];
+        i = 9;
+        x[0] = 1;
+        x[1] = 2;
+        print(x[0]);
     }
 }
