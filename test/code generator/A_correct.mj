@@ -1,14 +1,13 @@
-program Program 
-      const int pi = 3, e = 2;
-      int a,b;
+program Program
+      const int pi = 3, e = 5;
 {
 
-    void main() int i; int x[];
-    {     
-        x = new int[4];
-        i = 9;
-        x[0] = 1;
-        x[1] = 2;
-        print(x[0]);
-    }
+      void main() int i; int x[];
+      {     
+            //comment here
+            x = new int[3];
+            x[0] = 1;
+            x[1] = 2;
+            print(e);
+      }
 }

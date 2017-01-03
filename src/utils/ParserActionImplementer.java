@@ -657,8 +657,10 @@ public class ParserActionImplementer {
         if(!Tab.intType.equals(expr)) {
             reportError("Error! Expression must be of type Integer on line ", line);
         } else {
-            res = new Obj(Obj.Var,"",new Struct(Struct.Array, type));
+            res = new Obj(Obj.Elem,"",new Struct(Struct.Array, type));
             Code.put(Code.newarray);
+            if (type == Tab.charType) Code.put(0); 
+            else Code.put(1);
         }
         
         return res;

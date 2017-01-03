@@ -18,6 +18,7 @@ program Program
 
       void main() A a; C c; int i; int x[];
       {     
+
             a = new A;
             a.x = new int[5];
             a.y = new int[5];
