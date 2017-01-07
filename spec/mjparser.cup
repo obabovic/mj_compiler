@@ -290,9 +290,9 @@ MethodVarList ::=
                 
 
 MethodVarListAdditional ::= 
-                MethodVar COMMA MethodVarListAdditional 
+                MethodVarListAdditional COMMA MethodVar
         |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
-        |       error COMMA MethodVarListAdditional:methodVarListAdditional {: impl.reportInfo("Successful error recovery. Line ", methodVarListAdditionalleft); :} 
+        |       MethodVarListAdditional:methodVarListAdditional COMMA error {: impl.reportInfo("Successful error recovery. Line ", methodVarListAdditionalleft); :} 
         |       /* epsilon */ ;
 
 
@@ -342,6 +342,11 @@ DesignatorStatement ::=
         |       Designator:des DEC:dec {: RESULT = impl.designatorDec(des, desleft); :} ;
 
 
+DesignatorAssign ::=
+                Designator:des Assignop:op Expr:expr {: RESULT = impl.designatorCheckAssign(des, op, expr, desleft); :}
+        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+
 Designator ::=  
                 IDENT:ident {: impl.setDesignatorArrayExtension(ident, identleft); :} DesignatorExtension  {: RESULT = (impl.currentDesignatorArray != null)?impl.currentDesignatorArray:impl.resolveIdentificator(ident, identleft); impl.currentDesignatorArray = null; :};
 
@@ -350,11 +355,6 @@ DesignatorExtension ::=
                 DesignatorExtension DOT IDENT 
         |       DesignatorExtension LBRACK:lbrack {: RESULT = impl.designatorExtensionResolveArray(lbrackleft); :} Expr:expr {: impl.checkIfInt(new Obj(Obj.Var,"",expr), exprleft); :} RBRACK 
         |       /* epsilon */ ;
-
-
-DesignatorAssign ::=
-                Designator:des Assignop:op Expr:expr {: RESULT = impl.designatorCheckAssign(des, op, expr, desleft); :}
-        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
 ActPars ::=     Expr:expr {: RESULT = expr; :}
@@ -442,16 +442,16 @@ ConditionFact ::=
 
 //EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------			  
-Expr ::=        TermList:termList {: RESULT = termList.getType(); :}
-        |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); :} ;
+Expr ::=        TermList:termList {: RESULT = termList.getType(); impl.factorComesFromDesignator = false; :}
+        |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
 		 
 	 
-TermList ::=    Term:term {: RESULT = term; :}
-        |       Term:term Addop:addop TermList:termList {: RESULT = impl.termListAddOp(term, addop, termList, termleft); :};		 
+TermList ::=    Term:term {: RESULT = term; if((impl.isArray(term.getType()))&&(impl.factorComesFromDesignator))Code.load(term); :}
+        |       Term:term Addop:addop {: impl.addOpOccured++; :} TermList:termList {: RESULT = impl.addOp(term, addop, termList, termleft); :};		 
 
 
-Term ::=        Factor:factor {: RESULT = factor; :} 
-        |       Term:term Mulop:mulop Factor:factor {: RESULT = impl.termMulOp(term, mulop, factor, termleft); :} ;
+Term ::=        Factor:factor {: RESULT = factor; if((impl.mulOpOccured>0)&&(impl.isArray(factor.getType()))&&(impl.factorComesFromDesignator))Code.load(factor); :} 
+        |       Factor:factor Mulop:mulop {: impl.mulOpOccured++; :} Term:term {: RESULT = impl.mulOp(factor, mulop, term, termleft); :} ;
 
 
 Factor ::=       
