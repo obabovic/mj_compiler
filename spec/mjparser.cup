@@ -68,11 +68,11 @@ non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, Cla
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
 non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorAssign, DesignatorExtension, ActPars ;
+non terminal DesignatorStatement, DesignatorAssign, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Integer Addop, Mulop, Assignop, Relop, AddopLeft, AddopRight, MulopLeft, MulopRight ;  
-non terminal Obj Designator, Term, Factor, TermList ;
+non terminal Obj Designator, Term, Factor, TermList, DesignatorExtension ;
 non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm ;
 
 
@@ -343,17 +343,17 @@ DesignatorStatement ::=
 
 
 DesignatorAssign ::=
-                Designator:des Assignop:op Expr:expr {: RESULT = impl.designatorCheckAssign(des, op, expr, desleft); :}
+                Designator:des {: impl.inAssign = true; :} Assignop:op Expr:expr {: RESULT = impl.assign(des, op, expr, desleft); impl.inAssign = false; :} 
         |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
 Designator ::=  
-                IDENT:ident {: impl.setDesignatorArrayExtension(ident, identleft); :} DesignatorExtension  {: RESULT = (impl.currentDesignatorArray != null)?impl.currentDesignatorArray:impl.resolveIdentificator(ident, identleft); impl.currentDesignatorArray = null; :};
+                IDENT:ident {: impl.setDesignatorArrayExtension(ident, identleft); :} DesignatorExtension:designatorExtension {: RESULT = impl.designatorResolveIdentificator(ident, designatorExtension, identleft); :};
 
 
 DesignatorExtension ::= 
                 DesignatorExtension DOT IDENT 
-        |       DesignatorExtension LBRACK:lbrack {: RESULT = impl.designatorExtensionResolveArray(lbrackleft); :} Expr:expr {: impl.checkIfInt(new Obj(Obj.Var,"",expr), exprleft); :} RBRACK 
+        |       DesignatorExtension LBRACK:lbrack {: RESULT = impl.designatorExtensionResolveArray(lbrackleft); :} Expr:expr {: impl.checkIfInt(expr, exprleft); :} RBRACK 
         |       /* epsilon */ ;
 
 
@@ -446,12 +446,12 @@ Expr ::=        TermList:termList {: RESULT = termList.getType(); impl.factorCom
         |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
 		 
 	 
-TermList ::=    Term:term {: RESULT = term; if((impl.isArray(term.getType()))&&(impl.factorComesFromDesignator))Code.load(term); :}
-        |       Term:term Addop:addop {: impl.addOpOccured++; :} TermList:termList {: RESULT = impl.addOp(term, addop, termList, termleft); :};		 
+TermList ::=    Term:term {: RESULT = term; impl.termListCheckTermForArray(term); :}
+        |       Term:term Addop:addop {: impl.addOpOccured++; :} TermList:termList {: RESULT = impl.add(term, addop, termList, termleft); :};		 
 
 
-Term ::=        Factor:factor {: RESULT = factor; if((impl.mulOpOccured>0)&&(impl.isArray(factor.getType()))&&(impl.factorComesFromDesignator))Code.load(factor); :} 
-        |       Factor:factor Mulop:mulop {: impl.mulOpOccured++; :} Term:term {: RESULT = impl.mulOp(factor, mulop, term, termleft); :} ;
+Term ::=        Factor:factor {: RESULT = factor; impl.termCheckFactorForArray(factor); :} 
+        |       Factor:factor Mulop:mulop {: impl.mulOpOccured++; :} Term:term {: RESULT = impl.mul(factor, mulop, term, termleft); :} ;
 
 
 Factor ::=       

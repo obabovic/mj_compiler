@@ -3,9 +3,7 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/Users/obabovic/Documents/Developer/NetBeans/mj_compiler/spec/mjlexer.flex</file>
             <file>file:/Users/obabovic/Documents/Developer/NetBeans/mj_compiler/src/utils/ParserActionImplementer.java</file>
-            <file>file:/Users/obabovic/Documents/Developer/NetBeans/mj_compiler/test/mj_compiler/MJParserTest.java</file>
             <file>file:/Users/obabovic/Documents/Developer/NetBeans/mj_compiler/test/code%20generator/A_correct.mj</file>
             <file>file:/Users/obabovic/Documents/Developer/NetBeans/mj_compiler/spec/mjparser.cup</file>
             <file>file:/Users/obabovic/Documents/Developer/NetBeans/mj_compiler/src/mj_compiler/MJParser.java</file>

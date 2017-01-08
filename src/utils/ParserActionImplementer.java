@@ -34,10 +34,11 @@ public class ParserActionImplementer {
     
     public String currentClassName;
     public Struct currentClassParent;
-    public Obj currentDesignatorArray;
+    public Obj currentDesignator;
     public Obj currentClass;
     public boolean currentIfStatementConditionState;
     public boolean factorComesFromDesignator;
+    public boolean inAssign;
     
     public static final int NUMBER = 25;
     public static final int CHAR = 23;
@@ -98,13 +99,13 @@ public class ParserActionImplementer {
         Tab.currentScope().addToLocals(new Obj(Obj.Type, "string", stringType));
         Tab.currentScope().addToLocals(new Obj(Obj.Type, "intArray", intArrayType));
         
-        Tab.insert(Obj.Var, "_helper_1", new Struct(Struct.Int));
-        Tab.insert(Obj.Var, "_helper_2", new Struct(Struct.Int));
-        Tab.insert(Obj.Var, "_helper_3", new Struct(Struct.Int));
+        Obj helper = new Obj(Obj.Var, "_tmp", new Struct(Struct.Int));
         
         globalScope = Tab.currentScope();
         currentProgram = Tab.insert(Obj.Prog, progName, Tab.noType);
+        
         Tab.openScope();
+        Tab.insert(helper.getKind(), helper.getName(), helper.getType());
         currentScope = Tab.currentScope();
     }
     
@@ -162,16 +163,11 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Obj checkIfInt(Obj item, int line) {
-        Obj res = Tab.noObj;
+    public void checkIfInt(Struct item, int line) {
         
-        if(item.getType() != Tab.intType) {
+        if(!item.assignableTo(Tab.intType)) {
             reportError("Error! Type is not int. Line ", line);
-        } else {
-            res = item;
         }
-        
-        return res;
     }
     
     public Obj resolveIdentificator(String ident, int line) {
@@ -352,10 +348,11 @@ public class ParserActionImplementer {
         if(((typeToCheck != Tab.charType) && (typeToCheck != Tab.intType)&&(typeToCheck.getKind() != Struct.Bool)))
                 reportError("Error! Expression is not of type int, char or bool on line ", line);
         else {
-            Code.loadConst(number);
             if(typeToCheck == Tab.intType) {
+                Code.loadConst(5);
                 Code.put(Code.print);
             } else if (typeToCheck == Tab.charType) {
+                Code.loadConst(1);
                 Code.put(Code.bprint);
             }
         }
@@ -448,31 +445,66 @@ public class ParserActionImplementer {
         return res;
     }
     
+    public Obj designatorResolveIdentificator(String ident, Obj designatorExtension, int line) {
+        Obj res = null;
+        
+        if(designatorExtension != null) {
+            res = currentDesignator;
+        }
+        else {
+            res = resolveIdentificator(ident, line);
+        }
+        
+        return res;
+    }
+    
     public void setDesignatorArrayExtension(String ident, int line) {
         Obj temp = Tab.find(ident);
         if(temp.equals(Tab.noObj)) {
             reportError("Error! undefined identificator named \""+ident+"\" on line ", line);
         }
         if(temp.getType().getKind() == Struct.Array) {
-            currentDesignatorArray = temp;
+            currentDesignator = temp;
         }
     }
     
     public Obj designatorExtensionResolveArray(int line) {
         Obj res = null;
         
-        if(!(currentDesignatorArray.getType().getKind() == Struct.Array)) {
+        if(!(currentDesignator.getType().getKind() == Struct.Array)) {
             reportError("Error! Sentence is not of kind array on line ", line);
         } else {
-            Code.load(currentDesignatorArray);
-            res = new Obj(Obj.Elem,currentDesignatorArray.getName(),new Struct(Struct.Array, currentDesignatorArray.getType().getElemType()));
-            currentDesignatorArray = res;
+            Code.load(currentDesignator);
+            res = new Obj(Obj.Elem,currentDesignator.getName(),new Struct(Struct.Array, currentDesignator.getType().getElemType()));
+            currentDesignator = res;
         }
         
         return res;
     }
     
-    public Struct designatorCheckAssign(Obj des, Integer op, Struct expr, int line) {
+    public Struct designatorCallMethod(Obj designator, Obj ActPars, int line) {
+        Struct res = null;
+        
+        if(designator.getKind() != Obj.Meth) {
+            reportError("Error! Designator is not of kind Method. Line ", line);
+        } else {
+            reportInfo("Method of name \"" + designator.getName() + "\" has been detected on line ", line);
+            
+            res = designator.getType();
+            
+            int destinationAddress = designator.getAdr() - Code.pc;
+            Code.put(Code.call);
+            Code.put2(destinationAddress);
+            
+            if(designator.getType() != Tab.noType) {
+                Code.put(Code.pop);
+            }
+        }
+        
+        return res;
+    }
+    
+    public Struct assign(Obj des, Integer op, Struct expr, int line) {
         Struct res = null;
         boolean errorDetected = false;
         boolean desIsArray = false;
@@ -500,7 +532,6 @@ public class ParserActionImplementer {
                 }
             }
             
-            
             if (errorDetected) {
                 reportError("Error! Types are incompatible on line "+line);
             } else {
@@ -513,6 +544,10 @@ public class ParserActionImplementer {
                         insertIntoStackOnAssign(des);
                     } else {
                        //generate code for non symmetrical operations on variables
+                        Obj rightOperand = Tab.find("_tmp");
+                        Code.store(rightOperand);
+                        Code.load(des);
+                        Code.load(rightOperand);
                     }
                     Code.put(getOpCode(op.intValue()));
                     Code.store(des);
@@ -522,35 +557,15 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Struct designatorCallMethod(Obj designator, Obj ActPars, int line) {
-        Struct res = null;
-        
-        if(designator.getKind() != Obj.Meth) {
-            reportError("Error! Designator is not of kind Method. Line ", line);
-        } else {
-            reportInfo("Method of name \"" + designator.getName() + "\" has been detected on line ", line);
-            
-            res = designator.getType();
-            
-            int destinationAddress = designator.getAdr() - Code.pc;
-            Code.put(Code.call);
-            Code.put2(destinationAddress);
-            
-            if(designator.getType() != Tab.noType) {
-                Code.put(Code.pop);
-            }
-        }
-        
-        return res;
-    }
-    
-    public Obj addOp(Obj term, Integer operation, Obj termList, int line) {
+    public Obj add(Obj term, Integer operation, Obj termList, int line) {
         Obj res = null;
         boolean termIsArray = isArray(term.getType());
+        Struct termType = (term.getType().getKind() == Struct.Array)?term.getType().getElemType():term.getType();
+        Struct termListType = (termList.getType().getKind() == Struct.Array)?termList.getType().getElemType():termList.getType();
         
         if((term == Tab.noObj)||(termList == Tab.noObj)) {
             reportError("Error! Term is not of any type. Line ", line);
-        } else if((term.getType() != Tab.intType)||(termList.getType() != Tab.intType)) {
+        } else if((!termType.assignableTo(Tab.intType))||(!termListType.assignableTo(Tab.intType))) {
             reportError("Error! Term is not of type int. Line ", line);
             res = Tab.noObj;
         } else {
@@ -565,7 +580,7 @@ public class ParserActionImplementer {
                 if(termIsArray) {
                     // the current stack trace is:
                     // ... loperandAddress, loperandIndex, roperand
-                    Obj rightOperand = Tab.find("_helper_1");
+                    Obj rightOperand = Tab.find("_tmp");
                     Code.store(rightOperand);
                     Code.load(term);
                     Code.load(rightOperand);
@@ -579,7 +594,7 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Obj mulOp(Obj factor, Integer operation, Obj term, int line) {		
+    public Obj mul(Obj factor, Integer operation, Obj term, int line) {		
         Obj res = null;
         boolean termIsArray = isArray(term.getType());
         boolean factorIsArray = isArray(factor.getType());
@@ -588,37 +603,48 @@ public class ParserActionImplementer {
 
         if((term.getType() == Tab.noType) || (factor.getType() == Tab.noType)) {
             reportError("Error! Operands are not of any type. Line ", line);
+        } else if((!termType.assignableTo(Tab.intType)) || (!factorType.assignableTo(Tab.intType))) {
+            reportError("Error! Operands are not of type int. Line ", line);
+            res = Tab.noObj;   
         } else {
-            if((termType != Tab.intType) || (factorType != Tab.intType)) {
-                reportError("Error! Operands are not of type int. Line ", line);
-                res = Tab.noObj;   
-            }
-            else {
-                if(operation>100) {
-                    if(factorIsArray) 
-                        insertIntoStackOnMul(factor);
-                    
-                    Code.put(getOpCode(operation.intValue()));
-                    Code.store(factor);
-                    if(!factorIsArray || (mulOpOccured > 1)) {
-                        Code.load(factor);
-                    }
-                } else {
-                    if(factorIsArray) {
-                        // the current stack trace is:
-                        // ... loperandAddress, loperandIndex, roperand
-                        Obj rightOperand = Tab.find("_helper_1");
-                        Code.store(rightOperand);
-                        Code.load(factor);
-                        Code.load(rightOperand);
-                    }
-                    Code.put(getOpCode(operation.intValue()));
+            if(operation>100) {
+                if(factorIsArray) 
+                    insertIntoStackOnMul(factor);
+
+                Code.put(getOpCode(operation.intValue()));
+                Code.store(factor);
+                if(!factorIsArray || (mulOpOccured > 1)) {
+                    Code.load(factor);
                 }
-                res = factor;
+            } else {
+                if(factorIsArray) {
+                    // the current stack trace is:
+                    // ... loperandAddress, loperandIndex, roperand
+                    Obj rightOperand = Tab.find("_tmp");
+                    Code.store(rightOperand);
+                    Code.load(factor);
+                    Code.load(rightOperand);
+                }
+                Code.put(getOpCode(operation.intValue()));
             }
+            res = factor;
         }
         mulOpOccured--;
+        
         return res;
+    }
+  
+    public void termListCheckTermForArray(Obj term) {
+        if(isArray(term.getType())&&factorComesFromDesignator&&inAssign) {
+            Code.load(term);
+        }
+    }
+    
+    public void termCheckFactorForArray(Obj factor) {
+        //if the element is last in term mulop term mulop term
+        if((mulOpOccured>0) && isArray(factor.getType())&&factorComesFromDesignator&&inAssign) {
+            Code.load(factor);
+        }
     }
     
     public Obj factorNewDesignator(Obj designator, int line) {
@@ -628,10 +654,13 @@ public class ParserActionImplementer {
             res = Tab.noObj;
         } else {
             res = designator;
-            if(!isArray(designator.getType()))
+            if(!isArray(designator.getType())) 
+                Code.load(designator);
+            else if (isArray(designator.getType()) && !inAssign) 
                 Code.load(designator);
         }
         factorComesFromDesignator = true;
+        
         return res;
     }
     
@@ -672,9 +701,10 @@ public class ParserActionImplementer {
     
     public Obj factorNewChar(Character ch, int line) {
         Obj res = null;
-        
-        Obj temp = Tab.insert(Obj.Con, "", Tab.charType);
+        Obj temp = new Obj(Obj.Con, "", Tab.charType);
         temp.setAdr(ch.charValue());
+        Tab.insert(temp.getKind(), temp.getName(), temp.getType());
+        
         reportInfo("Constant of value \"" + ch + "\" has been detected on line ", line);
         Code.load(temp);
         res = temp;
@@ -686,7 +716,8 @@ public class ParserActionImplementer {
         Obj res = null;
         
         Obj boolObj = Tab.find("bool");
-        Obj temp = Tab.insert(Obj.Con, "", boolObj.getType());
+        Obj temp = new Obj(Obj.Con, "", boolObj.getType());
+        Tab.insert(temp.getKind(), temp.getName(), temp.getType());
         temp.setAdr((b.booleanValue()==true)?1:0);
         reportInfo("Constant of value \"" + b + "\" has been detected on line ", line);
         Code.load(temp);
@@ -762,19 +793,11 @@ public class ParserActionImplementer {
         // ... loperandAddress, loperandIndex, roperandValue
         // The resulting stack trace will be:
         // ... loperandAddress, loperandIndex, loperand(des), roperandValue
-        Obj rightOperand = Tab.find("_helper_3");
-        Obj leftOperandAddress = Tab.find("_helper_1");
-        Obj leftOperandIndex = Tab.find("_helper_2");
+        Obj rightOperand = Tab.find("_tmp");
 
         Code.store(rightOperand);
 
-        Code.store(leftOperandIndex);
-        Code.store(leftOperandAddress);
-        
-        Code.load(leftOperandAddress);
-        Code.load(leftOperandIndex);
-        Code.load(leftOperandAddress);
-        Code.load(leftOperandIndex);
+        Code.put(Code.dup2);
         
         Code.load(des);
         Code.load(rightOperand);
@@ -793,21 +816,12 @@ public class ParserActionImplementer {
     // ... loperandAddress, loperandIndex, loperandAddress, loperandIndex, loperand(des), roperandValue
     public void insertIntoStackOnMul(Obj des) {
         
-        Obj rightOperand = Tab.find("_helper_3");
-        Obj leftOperandAddress = Tab.find("_helper_1");
-        Obj leftOperandIndex = Tab.find("_helper_2");
+        Obj rightOperand = Tab.find("_tmp");
 
         Code.store(rightOperand);
 
-        Code.store(leftOperandIndex);
-        Code.store(leftOperandAddress);
-        
-        Code.load(leftOperandAddress);
-        Code.load(leftOperandIndex);
-        Code.load(leftOperandAddress);
-        Code.load(leftOperandIndex);
-        Code.load(leftOperandAddress);
-        Code.load(leftOperandIndex);
+        Code.put(Code.dup2);
+        Code.put(Code.dup2);
         
         Code.load(des);
         Code.load(rightOperand);

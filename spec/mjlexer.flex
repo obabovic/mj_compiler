@@ -91,7 +91,7 @@ return new_symbol(sym.EOF);
 ("true" | "false") {return new_symbol (sym.BOOL, Boolean.valueOf(yytext()));}
 [0-9]+ {return new_symbol(sym.NUMBER, new Integer (yytext()));}
 ([a-z]|[A-Z])[a-z|A-Z|0-9|_]* {return new_symbol (sym.IDENT, yytext());}
-"'"[\040-\176]"'" {return new_symbol (sym.CHAR, new Character (yytext().charAt(1)));}
+"'"."'" {return new_symbol (sym.CHAR, new Character (yytext().charAt(1)));}
 
 
 
