@@ -6,14 +6,14 @@ import java_cup.runtime.Symbol;
 %%
 
 %{
-		// ukljucivanje informacije o poziciji tokena
-		private Symbol new_symbol(int type) {
-				return new Symbol(type, yyline+1, yycolumn);
-		}
-		// ukljucivanje informacije o poziciji tokena
-		private Symbol new_symbol(int type, Object value) {
-				return new Symbol(type, yyline+1, yycolumn, value);
-		}
+    // ukljucivanje informacije o poziciji tokena
+    private Symbol new_symbol(int type) {
+        return new Symbol(type, yyline+1, yycolumn);
+    }
+    // ukljucivanje informacije o poziciji tokena
+    private Symbol new_symbol(int type, Object value) {
+        return new Symbol(type, yyline+1, yycolumn, value);
+    }
 %}
 
 %cup
@@ -31,9 +31,9 @@ return new_symbol(sym.EOF);
 " " {}
 "\b" {}
 "\t" {}
-"\r\n" {}
 "\r" {}
 "\n" {}
+"\r\n" {}
 "\f" {}
 "program" {return new_symbol(sym.PROG, yytext());}
 "new"   {return new_symbol(sym.NEW, yytext());}
@@ -85,11 +85,16 @@ return new_symbol(sym.EOF);
 
 <COMMENT>. {yybegin(COMMENT);}
 <COMMENT>"\r\n" {yybegin(YYINITIAL);}
+<COMMENT>"\r" {yybegin(YYINITIAL);}
+<COMMENT>"\n" {yybegin(YYINITIAL);}
 
-"'"[\040-\176]"'" {return new_symbol (sym.CHAR, new Character (yytext().charAt(1)));}
-[0-9]+ {return new_symbol(sym.NUMBER, new Integer (yytext()));}
 ("true" | "false") {return new_symbol (sym.BOOL, Boolean.valueOf(yytext()));}
+[0-9]+ {return new_symbol(sym.NUMBER, new Integer (yytext()));}
 ([a-z]|[A-Z])[a-z|A-Z|0-9|_]* {return new_symbol (sym.IDENT, yytext());}
+"'"."'" {return new_symbol (sym.CHAR, new Character (yytext().charAt(1)));}
+
+
+
 
 
 . {System.err.println("Lexical error ("+yytext()+") on line "+(yyline+1));}

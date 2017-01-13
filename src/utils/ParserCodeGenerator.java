@@ -9,8 +9,6 @@ package utils;
  *
  * @author obabovic
  */
-public enum DesignatorAllowedType {
-    FOR_INC,
-    FOR_DEC,
-    FOR_METHOD,
+public class ParserCodeGenerator {
+    
 }

@@ -4,7 +4,7 @@ program Program
 
 {
 
-      int main() int k; int x[];
+      void main() int k; int x[];
       {     
             e = 7;
             k = e;
