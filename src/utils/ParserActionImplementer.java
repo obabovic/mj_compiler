@@ -647,13 +647,16 @@ public class ParserActionImplementer {
     }
     
     public void termListWrapperCheckTermListForArray(Obj termList) {
-        //if the element is last in term mulop term mulop term
+        //happens in syntax and semantics tests.
+        if(termList == null) return;
+        
         if(isArray(termList.getType())&&inAssign&&factorComesFromDesignator) {
             Code.load(termList);
         }
     }
   
     public void termListCheckTermForArray(Obj term) {
+        //happens in syntax and semantics tests.
         if(term == null) return;
         
         if(isArray(term.getType())&&factorComesFromDesignator&&inAssign&&addOpLeftOccured>0) {
@@ -662,7 +665,9 @@ public class ParserActionImplementer {
     }
     
     public void termCheckFactorForArray(Obj factor) {
-        //if the element is last in term mulop term mulop term
+        
+        if(factor == null)
+            return;
         if(isArray(factor.getType())&&inAssign&&factorComesFromDesignator&&mulOpLeftOccured>0) {
             Code.load(factor);
         }

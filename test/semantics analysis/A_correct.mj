@@ -4,7 +4,7 @@ program Program
 
       void main() int i; int x[];
       {     
-            x = new int[3];
-            i = 0;
+        x = new int[3];
+        i = 0;
       }
 }
