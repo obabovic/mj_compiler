@@ -48,7 +48,11 @@ public class ParserActionImplementer {
     public static final int ASSIGN_MUL = 100 + Code.mul;
     public static final int ASSIGN_DIV = 100 + Code.div;
     public static final int ASSIGN_REM = 100 + Code.rem;
-    
+        
+    public int mulOpLeftOccured;
+    public int mulOpRightOccured;
+    public int addOpLeftOccured;
+    public int addOpRightOccured;
     
     public static final Struct boolType = new Struct(Struct.Bool);
     public static final Struct stringType = new Struct(Struct.Array, Tab.charType);
@@ -552,27 +556,16 @@ public class ParserActionImplementer {
             reportError("Error! Term is not of type int. Line ", line);
             res = Tab.noObj;
         } else {
-            if(operation>100) {
-                if(termIsArray) {
-                    insertIntoStackOnMul(term);
-                }
-                Code.put(getOpCode(operation.intValue()));
-                Code.store(term);
-                Code.load(term);
-            } else {
-                if(termIsArray) {
-                    // the current stack trace is:
-                    // ... loperandAddress, loperandIndex, roperand
-                    Obj rightOperand = Tab.find("_tmp");
-                    Code.store(rightOperand);
-                    Code.load(term);
-                    Code.load(rightOperand);
-                } else {
-                    Code.put(getOpCode(operation.intValue()));
-                }
+            if(termIsArray) {
+                insertIntoStackOnMul(term);
             }
+            Code.put(getOpCode(operation.intValue()));
+            Code.store(term);
+            Code.load(term);
+            
             res = term;
         }
+        addOpRightOccured--;
         return res;
     }
     
@@ -591,6 +584,7 @@ public class ParserActionImplementer {
             Code.put(getOpCode(operation.intValue()));
             res = term;
         }
+        addOpLeftOccured--;
         return res;
     }
     
@@ -609,29 +603,16 @@ public class ParserActionImplementer {
             reportError("Error! Operands are not of type int. Line ", line);
             res = Tab.noObj;   
         } else {
-            if(operation>100) {
-                if(factorIsArray) 
-                    insertIntoStackOnMul(factor);
+            if(factorIsArray) 
+                insertIntoStackOnMul(factor);
 
-                Code.put(getOpCode(operation.intValue()));
-                Code.store(factor);
-                if(!factorIsArray) {
-                    Code.load(factor);
-                }
-            } else {
-                if(factorIsArray) {
-                    // the current stack trace is:
-                    // ... loperandAddress, loperandIndex, roperand
-                    Obj rightOperand = Tab.find("_tmp");
-                    Code.store(rightOperand);
-                    Code.load(factor);
-                    Code.load(rightOperand);
-                }
-                Code.put(getOpCode(operation.intValue()));
-            }
+            Code.put(getOpCode(operation.intValue()));
+            Code.store(factor);
+            Code.load(factor);
+            
             res = factor;
         }
-        
+        mulOpRightOccured--;
         return res;
     }
     
@@ -661,21 +642,28 @@ public class ParserActionImplementer {
             
             res = factor;
         }
-        
+        mulOpLeftOccured--;
         return res;
+    }
+    
+    public void termListWrapperCheckTermListForArray(Obj termList) {
+        //if the element is last in term mulop term mulop term
+        if(isArray(termList.getType())&&inAssign&&factorComesFromDesignator) {
+            Code.load(termList);
+        }
     }
   
     public void termListCheckTermForArray(Obj term) {
         if(term == null) return;
         
-        if(isArray(term.getType())&&factorComesFromDesignator&&inAssign) {
+        if(isArray(term.getType())&&factorComesFromDesignator&&inAssign&&addOpLeftOccured>0) {
             Code.load(term);
         }
     }
     
     public void termCheckFactorForArray(Obj factor) {
         //if the element is last in term mulop term mulop term
-        if(isArray(factor.getType())&&factorComesFromDesignator&&inAssign) {
+        if(isArray(factor.getType())&&inAssign&&factorComesFromDesignator&&mulOpLeftOccured>0) {
             Code.load(factor);
         }
     }
