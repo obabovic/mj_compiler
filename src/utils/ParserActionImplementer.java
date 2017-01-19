@@ -54,9 +54,6 @@ public class ParserActionImplementer {
     public static final Struct stringType = new Struct(Struct.Array, Tab.charType);
     public static final Struct intArrayType = new Struct(Struct.Array, Tab.intType);
     
-    public int mulOpOccured;
-    public int addOpOccured;
-    
     public Logger log = Logger.getLogger(getClass());
     
     public void reportInfo(String msg, int line) {
@@ -507,30 +504,16 @@ public class ParserActionImplementer {
     public Struct assign(Obj des, Integer op, Struct expr, int line) {
         Struct res = null;
         boolean errorDetected = false;
-        boolean desIsArray = false;
-        boolean exprIsArray = false;
+        Struct desType = isArray(des.getType())?des.getType().getElemType():des.getType();
+        Struct exprType = isArray(expr)?expr.getElemType():expr;
         
         if(des.getKind() == Obj.Con) {
             reportError("Error! Left part of equation is a constant on line "+line);
             errorDetected = true;
+            res = Tab.noType;
         }
         else {
-            desIsArray = isArray(des.getType());
-            exprIsArray = isArray(expr);
-            
-            if(desIsArray) {
-                if(exprIsArray) {
-                    errorDetected = (!des.getType().getElemType().assignableTo(expr.getElemType()));
-                } else {
-                    errorDetected = (!des.getType().getElemType().assignableTo(expr));
-                }
-            } else {
-                if(exprIsArray) {
-                    errorDetected = (!des.getType().assignableTo(expr.getElemType()));
-                } else {
-                    errorDetected = (!des.getType().assignableTo(expr));
-                }
-            }
+            errorDetected = (desType.getKind() == exprType.getKind())?false:true;
             
             if (errorDetected) {
                 reportError("Error! Types are incompatible on line "+line);
@@ -540,7 +523,7 @@ public class ParserActionImplementer {
                     // ASSIGN
                     Code.store(des);
                 } else {
-                    if(desIsArray) {
+                    if(isArray(des.getType())) {
                         insertIntoStackOnAssign(des);
                     } else {
                        //generate code for non symmetrical operations on variables
@@ -557,7 +540,7 @@ public class ParserActionImplementer {
         return res;
     }
     
-    public Obj add(Obj term, Integer operation, Obj termList, int line) {
+    public Obj addRight(Obj term, Integer operation, Obj termList, int line) {
         Obj res = null;
         boolean termIsArray = isArray(term.getType());
         Struct termType = (term.getType().getKind() == Struct.Array)?term.getType().getElemType():term.getType();
@@ -590,11 +573,30 @@ public class ParserActionImplementer {
             }
             res = term;
         }
-        addOpOccured--;
         return res;
     }
     
-    public Obj mul(Obj factor, Integer operation, Obj term, int line) {		
+    public Obj addLeft(Obj termList, Integer operation, Obj term, int line) {
+        Obj res = null;
+        boolean termIsArray = isArray(term.getType());
+        Struct termType = (term.getType().getKind() == Struct.Array)?term.getType().getElemType():term.getType();
+        Struct termListType = (termList.getType().getKind() == Struct.Array)?termList.getType().getElemType():termList.getType();
+        
+        if((term == Tab.noObj)||(termList == Tab.noObj)) {
+            reportError("Error! Term is not of any type. Line ", line);
+        } else if((!termType.assignableTo(Tab.intType))||(!termListType.assignableTo(Tab.intType))) {
+            reportError("Error! Term is not of type int. Line ", line);
+            res = Tab.noObj;
+        } else {
+            Code.put(getOpCode(operation.intValue()));
+            res = term;
+        }
+        return res;
+    }
+    
+    
+    
+    public Obj mulRight(Obj factor, Integer operation, Obj term, int line) {		
         Obj res = null;
         boolean termIsArray = isArray(term.getType());
         boolean factorIsArray = isArray(factor.getType());
@@ -613,7 +615,7 @@ public class ParserActionImplementer {
 
                 Code.put(getOpCode(operation.intValue()));
                 Code.store(factor);
-                if(!factorIsArray || (mulOpOccured > 1)) {
+                if(!factorIsArray) {
                     Code.load(factor);
                 }
             } else {
@@ -629,7 +631,36 @@ public class ParserActionImplementer {
             }
             res = factor;
         }
-        mulOpOccured--;
+        
+        return res;
+    }
+    
+    
+    public Obj mulLeft(Obj term, Integer operation, Obj factor, int line) {		
+        Obj res = null;
+        boolean termIsArray = isArray(term.getType());
+        boolean factorIsArray = isArray(factor.getType());
+        Struct termType = (termIsArray)?term.getType().getElemType():term.getType();
+        Struct factorType = (factorIsArray)?factor.getType().getElemType():factor.getType();
+
+        if((term.getType() == Tab.noType) || (factor.getType() == Tab.noType)) {
+            reportError("Error! Operands are not of any type. Line ", line);
+        } else if((!termType.assignableTo(Tab.intType)) || (!factorType.assignableTo(Tab.intType))) {
+            reportError("Error! Operands are not of type int. Line ", line);
+            res = Tab.noObj;   
+        } else {
+            if(factorIsArray) {
+                // the current stack trace is:
+                // ... loperandAddress, loperandIndex, roperand
+                Obj rightOperand = Tab.find("_tmp");
+                Code.store(rightOperand);
+                Code.load(factor);
+                Code.load(rightOperand);
+            }
+            Code.put(getOpCode(operation.intValue()));
+            
+            res = factor;
+        }
         
         return res;
     }
@@ -644,7 +675,7 @@ public class ParserActionImplementer {
     
     public void termCheckFactorForArray(Obj factor) {
         //if the element is last in term mulop term mulop term
-        if((mulOpOccured>0) && isArray(factor.getType())&&factorComesFromDesignator&&inAssign) {
+        if(isArray(factor.getType())&&factorComesFromDesignator&&inAssign) {
             Code.load(factor);
         }
     }

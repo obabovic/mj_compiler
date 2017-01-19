@@ -72,7 +72,7 @@ non terminal DesignatorStatement, DesignatorAssign, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Integer Addop, Mulop, Assignop, Relop, AddopLeft, AddopRight, MulopLeft, MulopRight ;  
-non terminal Obj Designator, Term, Factor, TermList, DesignatorExtension ;
+non terminal Obj Designator, Term, Factor, TermList, DesignatorExtension, TermListWrapper ;
 non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm ;
 
 
@@ -442,16 +442,22 @@ ConditionFact ::=
 
 //EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------			  
-Expr ::=        TermList:termList {: RESULT = (termList!=null)?termList.getType():null; impl.factorComesFromDesignator = false; :}
-        |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
+Expr ::=        TermListWrapper:termList {: RESULT = (termList!=null)?termList.getType():null; impl.factorComesFromDesignator = false; :}
+        |       SUB TermListWrapper:termList {: RESULT = termList.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
 		 
-	 
+
+TermListWrapper ::= 
+                TermList:termList {: RESULT = termList; :}
+        |       TermList:termList AddopRight TermListWrapper:termListWrapper {:  :}
+        |       TermList:termList MulopRight TermListWrapper:termListWrapper {:  :};
+
+
 TermList ::=    Term:term {: RESULT = term; impl.termListCheckTermForArray(term); :}
-        |       Term:term Addop:addop {: impl.addOpOccured++; :} TermList:termList {: RESULT = impl.add(term, addop, termList, termleft); :};		 
+        |       TermList:termList AddopLeft:addop Term:term {: RESULT = impl.addLeft(termList, addop, term, termListleft); :};	 
 
 
-Term ::=        Factor:factor {: RESULT = factor; impl.termCheckFactorForArray(factor); :} 
-        |       Factor:factor Mulop:mulop {: impl.mulOpOccured++; :} Term:term {: RESULT = impl.mul(factor, mulop, term, termleft); :} ;
+Term ::=        Factor:factor {: RESULT = factor; impl.termCheckFactorForArray(factor); :}
+        |       Term:term MulopLeft:mulop Factor:factor {: RESULT = impl.mulLeft(term, mulop, factor, termleft); :};
 
 
 Factor ::=       
@@ -484,20 +490,12 @@ Assignop ::=    ASSIGN {: RESULT = new Integer(0); :}
         |       MulopRight:addopRight {: RESULT = addopRight; :};
 
 
-Addop ::=       AddopLeft:addopLeft {: RESULT = addopLeft; :} 
-        |       AddopRight:addopRight {: RESULT = addopRight; :} ;
-
-
 AddopLeft ::=   ADD {: RESULT = new Integer(Code.add); :}
         |       SUB {: RESULT = new Integer(Code.sub); :} ;
 
 
 AddopRight ::=  ASSIGNPLUS {: RESULT = new Integer(100+Code.add); :}
         |       ASSIGNMINUS {: RESULT = new Integer(100+Code.sub); :} ;
-
-
-Mulop ::=       MulopLeft:mulopLeft {: RESULT = mulopLeft; :}
-        |       MulopRight:mulopRight {: RESULT = mulopRight; :};
 
 
 MulopLeft ::=   MUL {: RESULT = new Integer(Code.mul); :}
