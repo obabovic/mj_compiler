@@ -442,7 +442,7 @@ ConditionFact ::=
 
 //EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------			  
-Expr ::=        TermList:termList {: RESULT = termList.getType(); impl.factorComesFromDesignator = false; :}
+Expr ::=        TermList:termList {: RESULT = (termList!=null)?termList.getType():null; impl.factorComesFromDesignator = false; :}
         |       SUB TermList:termList {: RESULT = termList.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
 		 
 	 

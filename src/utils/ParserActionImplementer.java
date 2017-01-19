@@ -635,6 +635,8 @@ public class ParserActionImplementer {
     }
   
     public void termListCheckTermForArray(Obj term) {
+        if(term == null) return;
+        
         if(isArray(term.getType())&&factorComesFromDesignator&&inAssign) {
             Code.load(term);
         }
