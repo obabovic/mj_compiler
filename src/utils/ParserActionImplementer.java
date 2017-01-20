@@ -547,6 +547,7 @@ public class ParserActionImplementer {
     public Obj addRight(Obj term, Integer operation, Obj termList, int line) {
         Obj res = null;
         boolean termIsArray = isArray(term.getType());
+        boolean termListIsArray = isArray(termList.getType());
         Struct termType = (term.getType().getKind() == Struct.Array)?term.getType().getElemType():term.getType();
         Struct termListType = (termList.getType().getKind() == Struct.Array)?termList.getType().getElemType():termList.getType();
         
@@ -556,6 +557,8 @@ public class ParserActionImplementer {
             reportError("Error! Term is not of type int. Line ", line);
             res = Tab.noObj;
         } else {
+            if(termListIsArray)
+                Code.load(termList);
             if(termIsArray) {
                 insertIntoStackOnMul(term);
             }
@@ -563,7 +566,7 @@ public class ParserActionImplementer {
             Code.store(term);
             Code.load(term);
             
-            res = term;
+            res = new Obj(term.getKind(),"", termType);
         }
         addOpRightOccured--;
         return res;
@@ -582,7 +585,8 @@ public class ParserActionImplementer {
             res = Tab.noObj;
         } else {
             Code.put(getOpCode(operation.intValue()));
-            res = term;
+            
+            res = new Obj(term.getKind(),"", termType);
         }
         addOpLeftOccured--;
         return res;
@@ -596,13 +600,16 @@ public class ParserActionImplementer {
         boolean factorIsArray = isArray(factor.getType());
         Struct termType = (termIsArray)?term.getType().getElemType():term.getType();
         Struct factorType = (factorIsArray)?factor.getType().getElemType():factor.getType();
-
+        
         if((term.getType() == Tab.noType) || (factor.getType() == Tab.noType)) {
             reportError("Error! Operands are not of any type. Line ", line);
         } else if((!termType.assignableTo(Tab.intType)) || (!factorType.assignableTo(Tab.intType))) {
             reportError("Error! Operands are not of type int. Line ", line);
             res = Tab.noObj;   
         } else {
+            if(termIsArray)
+                Code.load(term);
+            
             if(factorIsArray) 
                 insertIntoStackOnMul(factor);
 
@@ -610,7 +617,7 @@ public class ParserActionImplementer {
             Code.store(factor);
             Code.load(factor);
             
-            res = factor;
+            res = new Obj(factor.getKind(),"", factorType);
         }
         mulOpRightOccured--;
         return res;
@@ -623,53 +630,29 @@ public class ParserActionImplementer {
         boolean factorIsArray = isArray(factor.getType());
         Struct termType = (termIsArray)?term.getType().getElemType():term.getType();
         Struct factorType = (factorIsArray)?factor.getType().getElemType():factor.getType();
-
+        
         if((term.getType() == Tab.noType) || (factor.getType() == Tab.noType)) {
             reportError("Error! Operands are not of any type. Line ", line);
         } else if((!termType.assignableTo(Tab.intType)) || (!factorType.assignableTo(Tab.intType))) {
             reportError("Error! Operands are not of type int. Line ", line);
             res = Tab.noObj;   
         } else {
-            if(factorIsArray) {
-                // the current stack trace is:
-                // ... loperandAddress, loperandIndex, roperand
-                Obj rightOperand = Tab.find("_tmp");
-                Code.store(rightOperand);
-                Code.load(factor);
-                Code.load(rightOperand);
-            }
             Code.put(getOpCode(operation.intValue()));
             
-            res = factor;
+            res = new Obj(term.getKind(),"", termType);
         }
         mulOpLeftOccured--;
         return res;
     }
     
-    public void termListWrapperCheckTermListForArray(Obj termList) {
+    //Note: All of the checker functions convert an array that is not the only element of an expression to a value
+    // e.g: x + y[0] -> convert to value from address/index, y[0] -> don't convert
+    public void termListWrapperCheckTermListForArray(Obj termList, int line) {
         //happens in syntax and semantics tests.
         if(termList == null) return;
         
-        if(isArray(termList.getType())&&inAssign&&factorComesFromDesignator) {
+        if(isArray(termList.getType())&&inAssign&&factorComesFromDesignator&&addOpRightOccured==0&&mulOpRightOccured==0) {
             Code.load(termList);
-        }
-    }
-  
-    public void termListCheckTermForArray(Obj term) {
-        //happens in syntax and semantics tests.
-        if(term == null) return;
-        
-        if(isArray(term.getType())&&factorComesFromDesignator&&inAssign&&addOpLeftOccured>0) {
-            Code.load(term);
-        }
-    }
-    
-    public void termCheckFactorForArray(Obj factor) {
-        
-        if(factor == null)
-            return;
-        if(isArray(factor.getType())&&inAssign&&factorComesFromDesignator&&mulOpLeftOccured>0) {
-            Code.load(factor);
         }
     }
     

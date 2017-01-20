@@ -442,22 +442,22 @@ ConditionFact ::=
 
 //EXPR -------------------------------------------------------------------------
 //------------------------------------------------------------------------------			  
-Expr ::=        TermListWrapper:termList {: RESULT = (termList!=null)?termList.getType():null; impl.factorComesFromDesignator = false; :}
-        |       SUB TermListWrapper:termList {: RESULT = termList.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
+Expr ::=        TermListWrapper:termListWrapper {: RESULT = (termListWrapper!=null)?termListWrapper.getType():null; impl.factorComesFromDesignator = false; :}
+        |       SUB TermListWrapper:termListWrapper {: RESULT = termListWrapper.getType(); Code.put(Code.neg); impl.factorComesFromDesignator = false; :} ;
 		 
 
 TermListWrapper ::= 
-                TermList:termList {: RESULT = termList; impl.termListWrapperCheckTermListForArray(termList); :}
+                TermList:termList {: impl.termListWrapperCheckTermListForArray(termList, termListleft); RESULT = termList; :}
         |       TermList:termList AddopRight:addop {: impl.addOpRightOccured++; :} TermListWrapper:termListWrapper {: RESULT = impl.addRight(termList, addop, termListWrapper, termListleft); :}
-        |       TermList:termList MulopRight:mulop {: impl.mulOpRightOccured++; :} TermListWrapper:termListWrapper {: RESULT = impl.mulRight(termList, mulop, termListWrapper, termListleft); :};
+        |       TermList:termList MulopRight:mulop {: impl.mulOpRightOccured++; :} TermListWrapper:termListWrapper {: RESULT = impl.mulRight(termList, mulop, termListWrapper, termListleft); :} ;
 
 
-TermList ::=    Term:term {: RESULT = term; impl.termListCheckTermForArray(term); :}
-        |       TermList:termList {: if(impl.isArray(termList.getType())) Code.load(termList); :} AddopLeft:addop {: impl.addOpLeftOccured++; :} Term:term {: RESULT = impl.addLeft(termList, addop, term, termListleft); :};	 
+TermList ::=    Term:term {: RESULT = term; :}
+        |       TermList:termList {: if(impl.isArray(termList.getType())) Code.load(termList); :} AddopLeft:addop {: impl.addOpLeftOccured++; :} Term:term {: if(impl.isArray(term.getType())) Code.load(term); RESULT = impl.addLeft(termList, addop, term, termListleft); :};	 
 
 
-Term ::=        Factor:factor {: RESULT = factor; impl.termCheckFactorForArray(factor); :}
-        |       Term:term {: if(impl.isArray(term.getType()))Code.load(term); :} MulopLeft:mulop {: impl.mulOpLeftOccured++; :} Factor:factor {: RESULT = impl.mulLeft(term, mulop, factor, termleft); :};
+Term ::=        Factor:factor {: RESULT = factor; :}
+        |       Term:term {: if(impl.isArray(term.getType())) Code.load(term); :} MulopLeft:mulop {: impl.mulOpLeftOccured++; :} Factor:factor {: if(impl.isArray(factor.getType())) Code.load(factor); RESULT = impl.mulLeft(term, mulop, factor, termleft); :} ;
 
 
 Factor ::=       
@@ -486,8 +486,8 @@ Relop ::=       EQ {: RESULT = new Integer(Code.eq); :}
 
 
 Assignop ::=    ASSIGN {: RESULT = new Integer(0); :}
-        |       AddopRight:addopLeft {: RESULT = addopLeft; :}
-        |       MulopRight:addopRight {: RESULT = addopRight; :};
+        |       AddopRight:addopRight {: RESULT = addopRight; :}
+        |       MulopRight:mulopRight {: RESULT = mulopRight; :};
 
 
 AddopLeft ::=   ADD {: RESULT = new Integer(Code.add); :}
