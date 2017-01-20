@@ -62,13 +62,13 @@ terminal     ADD, SUB, MUL, DIV, MOD;
 non terminal Program, ProgramName, GlobalParameterList, MethodList ;
 non terminal GlobalParameterType ;
 non terminal ConstDecl, ConstList, Constant, ConstType ;
-non terminal GlobalVarDecl, GlobalVarList, GlobalVar ; 
+non terminal GlobalVarDecl, GlobalVarList, GlobalVarListError, GlobalVar ; 
 non terminal ClassDecl, ClassExtended, ClassMethodListOptional, ClassMethodDecl, ClassMethodStatic, ClassMethodReturnType, ClassFormPars, ClassMethodVarDeclList ;
-non terminal ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
+non terminal ClassVarError, ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
-non terminal MethodDecl, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
+non terminal MethodDecl, MethodVarDeclError, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarListAdditionalError, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorAssign, ActPars ;
+non terminal DesignatorStatement, DesignatorAssign, DesignatorAssignError, ActPars ;
 non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
 non terminal IfStatement, IfCondition ;
 non terminal Integer Addop, Mulop, Assignop, Relop, AddopLeft, AddopRight, MulopLeft, MulopRight ;  
@@ -134,7 +134,10 @@ GlobalVarList ::=
                 GlobalVar COMMA GlobalVarList 
         |       GlobalVar
         |       error COMMA GlobalVarList:globalVarList {: impl.reportInfo("Successful error recovery. Line ", globalVarListleft); :} 
-        |       error:err {: impl.reportInfo("Successful error recovery. Line", errleft); :} ;
+        |       GlobalVarListError:err {: impl.reportInfo("Successful error recovery. Line", errleft); :} ;
+
+GlobalVarListError ::=       
+                error ;
 
 
 GlobalVar ::=   IDENT:varName {: impl.addVar(varName, varNameleft, SymbolOrigin.GLOBAL, false); :} 
@@ -169,7 +172,10 @@ ClassVarDecl ::=
 ClassVarList ::=   
                 ClassVar COMMA ClassVarList 
         |       ClassVar 
-        |       error:err SEMI {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
+        |       ClassVarError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+ClassVarError ::=
+                error:err SEMI 
         |       error:err LBRACE {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
@@ -276,9 +282,13 @@ FormalParamDecl ::=
 
 MethodVarDeclList ::=   
                 MethodVarDecl SEMI MethodVarDeclList
-        |       error:err SEMI {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
-        |       error:err {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
+        |       MethodVarDeclError:err {: impl.reportInfo("Successful error recovery on line ", errleft); :} 
         |       /* epsilon */ ;
+
+
+MethodVarDeclError ::=
+                error:err SEMI
+        |       error:err ; 
 
 
 MethodVarDecl ::=     
@@ -291,9 +301,12 @@ MethodVarList ::=
 
 MethodVarListAdditional ::= 
                 MethodVarListAdditional COMMA MethodVar
-        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
         |       MethodVarListAdditional:methodVarListAdditional COMMA error {: impl.reportInfo("Successful error recovery. Line ", methodVarListAdditionalleft); :} 
+        |       MethodVarListAdditionalError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
         |       /* epsilon */ ;
+
+MethodVarListAdditionalError ::=
+                error:err ;
 
 
 MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin.LOCAL, false); :} 
@@ -344,7 +357,11 @@ DesignatorStatement ::=
 
 DesignatorAssign ::=
                 Designator:des {: impl.inAssign = true; :} Assignop:op Expr:expr {: RESULT = impl.assign(des, op, expr, desleft); impl.inAssign = false; :} 
-        |       error:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+        |       DesignatorAssignError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}  ;
+
+
+DesignatorAssignError ::=
+                error:err ;
 
 
 Designator ::=  
