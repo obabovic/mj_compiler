@@ -31,7 +31,7 @@ public class MJParserTest {
                 String inputTests[] = {"lexical analysis", "syntax analysis", "semantics analysis", "code generator"};
                 String testLevel[] = {"A","B","C"};
                 String testType[] = {"_correct.mj","_wrong.mj"};
-		String inputProgram = "test/"+inputTests[1]+"/"+testLevel[1]+testType[1];
+		String inputProgram = "test/"+inputTests[2]+"/"+testLevel[1]+testType[0];
                 
 		Reader br = null;
 		try {

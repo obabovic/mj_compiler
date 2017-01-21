@@ -388,8 +388,8 @@ DesignatorExtensionBracksError ::=
                 error ;
 
 
-ActPars ::=     Expr:expr {: RESULT = expr; :}
-        |       Expr COMMA ActPars ;
+ActPars ::=     Expr:expr {: RESULT = expr; impl.reportInfo("Actual parameter detected. Line ", exprleft); :}
+        |       Expr:expr {: impl.reportInfo("Actual parameter detected. Line ", exprleft); :} COMMA ActPars ;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -408,8 +408,8 @@ PrintStatement ::=
 //RETURN STATEMENT -------------------------------------------------------------
 //------------------------------------------------------------------------------
 ReturnStatement ::= 
-                RETURN {: impl.markReturn(); :}
-        |       RETURN Expr:expr {: impl.markReturn(); :} ;
+                RETURN {: impl.markReturn(null); :}
+        |       RETURN Expr:expr {: impl.markReturn(expr); :} ;
 //------------------------------------------------------------------------------		   
 //------------------------------------------------------------------------------
 
@@ -489,11 +489,11 @@ TermListWrapper ::=
 
 
 TermList ::=    Term:term {: RESULT = term; :}
-        |       TermList:termList {: if(impl.isArray(termList.getType())) Code.load(termList); :} AddopLeft:addop {: impl.addOpLeftOccured++; :} Term:term {: if(impl.isArray(term.getType())) Code.load(term); RESULT = impl.addLeft(termList, addop, term, termListleft); :};	 
+        |       TermList:termList {: if(impl.isArray(termList.getType())) { Code.load(termList); impl.reportInfo("Array element detected. Line ", termListleft); } :} AddopLeft:addop {: impl.addOpLeftOccured++; :} Term:term {: if(impl.isArray(term.getType())) { Code.load(term); impl.reportInfo("Array element detected. Line ", termListleft); } RESULT = impl.addLeft(termList, addop, term, termListleft); :};	 
 
 
 Term ::=        Factor:factor {: RESULT = factor; :}
-        |       Term:term {: if(impl.isArray(term.getType())) Code.load(term); :} MulopLeft:mulop {: impl.mulOpLeftOccured++; :} Factor:factor {: if(impl.isArray(factor.getType())) Code.load(factor); RESULT = impl.mulLeft(term, mulop, factor, termleft); :} ;
+        |       Term:term {: if(impl.isArray(term.getType())) { Code.load(term);  impl.reportInfo("Array element detected. Line ", termleft); } :} MulopLeft:mulop {: impl.mulOpLeftOccured++; :} Factor:factor {: if(impl.isArray(factor.getType())) { Code.load(factor); impl.reportInfo("Array element detected. Line ", termleft);} RESULT = impl.mulLeft(term, mulop, factor, termleft); :} ;
 
 
 Factor ::=       

@@ -201,7 +201,7 @@ public class ParserActionImplementer {
             int address = 0;
             int constKind = currentConstType.getKind();
             
-            if(((constKind==Obj.Con)&&(!((constValue instanceof Integer)||(constValue instanceof Boolean))))||((constKind==2)&&(!(constValue instanceof Character)))) {
+            if(((constKind == Struct.Int)&&!(constValue instanceof Integer))||((constKind == Struct.Bool)&&!(constValue instanceof Boolean))||((constKind == Struct.Char)&&!(constValue instanceof Character))) {
                 reportError("Error! Constant named \"" + constName + "\" has different type and value. Line " , line);
             } else {
                 if(constValue instanceof Integer) {
@@ -296,7 +296,15 @@ public class ParserActionImplementer {
         
     }
     
-    public void markReturn() {
+    public void markReturn(Struct expr) {
+        if(expr == null) {
+            return;
+        }
+        
+        if(expr.getKind() != currentMethod.getKind()) {
+            reportError("Error! Method return value and type are not compatible.");
+        }
+        
         if(currentMethod!=null) {
             currentMethodHasReturn = true;
         }
@@ -332,7 +340,7 @@ public class ParserActionImplementer {
     }
     
     public void statementCheckIfCondition(Struct condition, int line) {
-        if(condition != Tab.intType) {
+        if(condition.getKind() != Struct.Bool) {
             reportError("Error! Condition is not of kind bool. Line ", line);
         } else {
             
@@ -534,6 +542,9 @@ public class ParserActionImplementer {
                 reportError("Error! Types are incompatible on line "+line);
             } else {
                 res = des.getType();
+                if(isArray(des.getType()))
+                    reportInfo("Array element detected. Line ", line);
+                
                 if(op.intValue() == 0) {
                     // ASSIGN
                     Code.store(des);
@@ -664,6 +675,7 @@ public class ParserActionImplementer {
         
         if(isArray(termList.getType())&&inAssign&&factorComesFromDesignator&&addOpRightOccured==0&&mulOpRightOccured==0) {
             Code.load(termList);
+            reportInfo("Array element detected. Line ", line);
         }
     }
     

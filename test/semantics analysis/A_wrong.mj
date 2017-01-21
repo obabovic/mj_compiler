@@ -1,6 +1,6 @@
 program Program 
-      const int pi = 3, e = 2;
-      char z,l;
+      const int pi = 'l', e = 2;
+      char l;
 
 {
 
@@ -8,5 +8,7 @@ program Program
       {     
             e = 7;
             k = e;
+            a();
+            b(z);
       }
 }
