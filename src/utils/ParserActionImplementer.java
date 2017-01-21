@@ -31,6 +31,7 @@ public class ParserActionImplementer {
     public int currentMethodNameLine;
     public Boolean currentMethodIsStatic;
     public Boolean currentMethodHasReturn;
+    public boolean methodForClass;
     
     public String currentClassName;
     public Struct currentClassParent;
@@ -264,6 +265,9 @@ public class ParserActionImplementer {
             currentMethod = Tab.insert(Obj.Meth, currentMethodName, currentMethodType);
             Tab.openScope();
         }
+        
+        if(methodForClass) 
+            increment(SymbolOccurence.INNERCLASS_METHOD_DEFINITIONS);
     }
     
     public void methodStart() {
@@ -336,6 +340,10 @@ public class ParserActionImplementer {
     }
     
     public void statementCheckForCondition(Struct condition, int line) {
+        //condition can be null in syntax analysis
+        if(condition==null)
+            return;
+        
         if(condition.getKind() != Struct.Bool) {
             reportError("Error! Condition is not of kind bool. Line ", line);
         } else {
@@ -501,6 +509,9 @@ public class ParserActionImplementer {
                 Code.put(Code.pop);
             }
         }
+        
+        if("main".equals(currentMethod.getName())) 
+            increment(SymbolOccurence.GLOBAL_METHOD_CALLS);
         
         return res;
     }

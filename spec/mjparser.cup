@@ -66,11 +66,11 @@ non terminal GlobalVarDecl, GlobalVarList, GlobalVarListError, GlobalVar ;
 non terminal ClassDecl, ClassExtended, ClassMethodListOptional, ClassMethodDecl, ClassMethodStatic, ClassMethodReturnType, ClassFormPars, ClassMethodVarDeclList ;
 non terminal ClassVarError, ClassStatementList, ClassFormalParamList, ClassFormalParamDecl, ClassMethodVarDecl, ClassMethodVarList ;
 non terminal ClassMethodVar, ClassVarDeclList, ClassVarDecl, ClassMethodList, ClassVarList, ClassVar ;
-non terminal MethodDecl, MethodVarDeclError, MethodReturnType, FormPars, MethodVarDeclList, MethodVarListAdditional, MethodVarListAdditionalError, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
+non terminal MethodDecl, MethodVarDeclError, MethodReturnType, FormPars, FormalParamListError, MethodVarDeclList, MethodVarListAdditional, MethodVarListAdditionalError, MethodVarDecl, MethodVarList, MethodVar, FormalParamList, FormalParamDecl;
 non terminal StatementList, Statement, StatementMatched, StatementUnmatched, ForStatement, ReadStatement, PrintStatement, ReturnStatement;
-non terminal DesignatorStatement, DesignatorAssign, DesignatorAssignError, ActPars ;
-non terminal ForStatementDesignatorExtension, ForStatementConditionExtension ;
-non terminal IfStatement, IfCondition ;
+non terminal DesignatorStatement, DesignatorAssign, DesignatorAssignError, DesignatorExtensionBracks, DesignatorExtensionBracksError, ActPars ;
+non terminal ForStatementDesignatorExtension, ForStatementConditionExtension, ForStatementConditionExtensionError , ForStatementDesignatorExtensionError ;
+non terminal IfStatement, IfCondition, ConditionError ;
 non terminal Integer Addop, Mulop, Assignop, Relop, AddopLeft, AddopRight, MulopLeft, MulopRight ;  
 non terminal Obj Designator, Term, Factor, TermList, DesignatorExtension, TermListWrapper ;
 non terminal Struct Type, Expr, ConditionFact, Condition, ConditionTerm ;
@@ -189,12 +189,12 @@ ClassMethodListOptional ::=
 
 
 ClassMethodList ::=  
-                ClassMethodList ClassMethodDecl 
+                ClassMethodList ClassMethodDecl {:  :}
         |       /* epsilon */ ;
 
 					
 ClassMethodDecl ::=  
-                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList LBRACE {: impl.addMethod(); :} ClassStatementList RBRACE {: impl.methodEnd(); :};
+                ClassMethodStatic ClassMethodReturnType LPAREN ClassFormPars RPAREN ClassMethodVarDeclList LBRACE {: impl.methodForClass = true; impl.addMethod(); impl.methodForClass=false;:} ClassStatementList RBRACE {: impl.methodEnd(); :};
 
 
 ClassMethodStatic ::=    
@@ -272,12 +272,17 @@ FormPars ::=    FormalParamList
 
 FormalParamList ::= 
                 FormalParamDecl COMMA FormalParamList 
+        |       FormalParamListError:err COMMA FormalParamList {: impl.reportInfo("Successful error recovery on line ", errleft); :}
+        |       FormalParamListError:err {: impl.reportInfo("Successful error recovery on line ", errleft); :}
         |       FormalParamDecl ;
 	
-				
+
+FormalParamListError ::= error ;				
+
+
 FormalParamDecl ::= 
                 Type:type IDENT:name {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, false); :}
-        |       Type:type IDENT:name LBRACK RBRACK {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, true); :};
+        |       Type:type IDENT:name LBRACK RBRACK {: impl.currentVarType = type; impl.addVar(name, nameleft, SymbolOrigin.UNIMPORTANT, true); :} ;
 
 
 MethodVarDeclList ::=   
@@ -296,11 +301,11 @@ MethodVarDecl ::=
 
 
 MethodVarList ::= 
-                MethodVar MethodVarListAdditional ;
+                MethodVar MethodVarListAdditional {: impl.increment(SymbolOccurence.METHOD_FORMAL_ARGUMENT_DECLARATIONS); :};
                 
 
 MethodVarListAdditional ::= 
-                MethodVarListAdditional COMMA MethodVar
+                MethodVarListAdditional COMMA MethodVar {: impl.increment(SymbolOccurence.METHOD_FORMAL_ARGUMENT_DECLARATIONS); :}
         |       MethodVarListAdditional:methodVarListAdditional COMMA error {: impl.reportInfo("Successful error recovery. Line ", methodVarListAdditionalleft); :} 
         |       MethodVarListAdditionalError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}
         |       /* epsilon */ ;
@@ -319,7 +324,7 @@ MethodVar ::=   IDENT:varName  {: impl.addVar(varName, varNameleft, SymbolOrigin
 //STATEMENT --------------------------------------------------------------------
 //------------------------------------------------------------------------------
 StatementList ::=   
-                StatementList Statement 
+                StatementList Statement {: impl.increment(SymbolOccurence.BLOCK_STATEMENTS); :}
         |       /* epsilon */ ;
 
 
@@ -350,14 +355,14 @@ StatementUnmatched ::=
 DesignatorStatement ::= 
                 DesignatorAssign
         |       Designator:des LPAREN RPAREN {: RESULT = impl.designatorCallMethod(des, null, desleft); :}
-        |       Designator:des LPAREN ActPars RPAREN {: :}
+        |       Designator:des LPAREN ActPars RPAREN {: if("main".equals(impl.currentMethod.getName())) impl.increment(SymbolOccurence.GLOBAL_METHOD_CALLS); :}
         |       Designator:des INC:inc {: RESULT = impl.designatorInc(des, desleft); :}
         |       Designator:des DEC:dec {: RESULT = impl.designatorDec(des, desleft); :} ;
 
 
 DesignatorAssign ::=
                 Designator:des {: impl.inAssign = true; :} Assignop:op Expr:expr {: RESULT = impl.assign(des, op, expr, desleft); impl.inAssign = false; :} 
-        |       DesignatorAssignError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :}  ;
+        |       DesignatorAssignError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
 
 
 DesignatorAssignError ::=
@@ -370,8 +375,17 @@ Designator ::=
 
 DesignatorExtension ::= 
                 DesignatorExtension DOT IDENT 
-        |       DesignatorExtension LBRACK:lbrack {: RESULT = impl.designatorExtensionResolveArray(lbrackleft); :} Expr:expr {: impl.checkIfInt(expr, exprleft); :} RBRACK 
+        |       DesignatorExtension LBRACK:lbrack {: RESULT = impl.designatorExtensionResolveArray(lbrackleft); :} DesignatorExtensionBracks RBRACK 
         |       /* epsilon */ ;
+
+
+DesignatorExtensionBracks ::= 
+                Expr:expr {: impl.checkIfInt(expr, exprleft); :} 
+        |       DesignatorExtensionBracksError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :} ;
+
+
+DesignatorExtensionBracksError ::=
+                error ;
 
 
 ActPars ::=     Expr:expr {: RESULT = expr; :}
@@ -441,9 +455,14 @@ IfCondition ::= IF LPAREN Condition:condition RPAREN {: impl.statementCheckIfCon
 
 Condition ::=       
                 ConditionTerm:conditionTerm {: RESULT = conditionTerm; :}
-        |       ConditionTerm OR Condition ;
+        |       ConditionTerm OR Condition 
+        |       ConditionError:err {: impl.reportInfo("Successful error recovery. Line ", errleft); :};
 
- 			   
+ 		
+ConditionError ::= 
+                error ;
+
+	   
 ConditionTerm ::=   
                 ConditionFact:conditionFact {: RESULT = conditionFact; :}
         |       ConditionFact AND ConditionTerm ;

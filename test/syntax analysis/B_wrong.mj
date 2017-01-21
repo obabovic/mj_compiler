@@ -1,16 +1,13 @@
 program Program 
-      const int pi = 3, e = 2;
-      int z[,l;
-      int m
-      int k;
 {
-      void main() 
-        int z;
-        int k,l];
-        int m
-      {     
-            x = new int3];
-            x += ;
-            i = 0;
-      }
+    void b(int c[, int k, int l]) {}
+
+    void main() int niz[];
+    {     
+        if(z;) continue;
+        for(i<;;){}
+        for(;i<;){}
+        for(;;.){}
+        niz[..] = 3;
+    }
 }
